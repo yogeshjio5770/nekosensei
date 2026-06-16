@@ -71,6 +71,7 @@ _Add screenshots after first `flutter run` on device._
 ```bash
 git clone https://github.com/YOUR_USERNAME/nekosensei.git
 cd nekosensei
+cp lib/firebase_options.example.dart lib/firebase_options.dart
 flutter pub get
 flutter run
 ```

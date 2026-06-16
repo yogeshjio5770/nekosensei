@@ -18,6 +18,10 @@ Write-Host "`n[2/5] Installing dependencies..." -ForegroundColor Yellow
 flutter pub get
 
 Write-Host "`n[3/5] Setting up environment..." -ForegroundColor Yellow
+if (-not (Test-Path "lib/firebase_options.dart")) {
+    Copy-Item "lib/firebase_options.example.dart" "lib/firebase_options.dart"
+    Write-Host "Created lib/firebase_options.dart from example" -ForegroundColor Green
+}
 if (-not (Test-Path ".env")) {
     Copy-Item ".env.example" ".env"
     Write-Host "Created .env — add your GROQ_API_KEY" -ForegroundColor Green
