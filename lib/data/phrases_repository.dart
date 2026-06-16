@@ -51,6 +51,42 @@ class PhrasesRepository {
       english: 'Goodbye',
       context: 'Farewell',
     ),
+    DailyPhrase(
+      japanese: 'お願いします',
+      romaji: 'Onegaishimasu',
+      english: 'Please',
+      context: 'Polite request',
+    ),
+    DailyPhrase(
+      japanese: '分かりました',
+      romaji: 'Wakarimashita',
+      english: 'I understand',
+      context: 'Confirming comprehension',
+    ),
+    DailyPhrase(
+      japanese: '大丈夫です',
+      romaji: 'Daijoubu desu',
+      english: 'It\'s okay / I\'m fine',
+      context: 'Reassurance',
+    ),
+    DailyPhrase(
+      japanese: '元気ですか',
+      romaji: 'Genki desu ka',
+      english: 'How are you?',
+      context: 'Casual greeting',
+    ),
+    DailyPhrase(
+      japanese: 'いただきます',
+      romaji: 'Itadakimasu',
+      english: 'Thanks for the meal (before eating)',
+      context: 'Mealtime',
+    ),
+    DailyPhrase(
+      japanese: 'ごちそうさまでした',
+      romaji: 'Gochisousama deshita',
+      english: 'Thanks for the meal (after eating)',
+      context: 'After meal',
+    ),
   ];
 
   static const speakDrills = [
@@ -102,6 +138,24 @@ class PhrasesRepository {
       english: 'I understand',
       hint: 'Wa-ka-ri-ma-shi-ta',
     ),
+    SpeakDrillEntry(
+      japanese: '駅はどこですか',
+      romaji: 'Eki wa doko desu ka',
+      english: 'Where is the station?',
+      hint: 'E-ki wa do-ko de-su ka',
+    ),
+    SpeakDrillEntry(
+      japanese: 'お会計お願いします',
+      romaji: 'Okaikei onegaishimasu',
+      english: 'Check please',
+      hint: 'O-kai-kei o-ne-gai-shi-ma-su',
+    ),
+    SpeakDrillEntry(
+      japanese: '日本語が少し話せます',
+      romaji: 'Nihongo ga sukoshi hanasemasu',
+      english: 'I can speak a little Japanese',
+      hint: 'Ni-hon-go ga su-ko-shi ha-na-se-ma-su',
+    ),
   ];
 
   static const conversationScenarios = [
@@ -146,6 +200,76 @@ class PhrasesRepository {
           japanese: 'はじめまして。よろしくお願いします',
           romaji: 'Hajimemashite. Yoroshiku onegaishimasu',
           english: 'Nice to meet you too',
+        ),
+      ],
+    ),
+    ConversationScenario(
+      id: 'shopping',
+      title: 'At the Store',
+      lines: [
+        ScenarioLine(
+          speaker: 'You',
+          japanese: 'これはいくらですか',
+          romaji: 'Kore wa ikura desu ka',
+          english: 'How much is this?',
+          isUserLine: true,
+        ),
+        ScenarioLine(
+          speaker: 'Clerk',
+          japanese: '五百円です',
+          romaji: 'Gohyaku en desu',
+          english: 'It is 500 yen',
+        ),
+        ScenarioLine(
+          speaker: 'You',
+          japanese: 'ください',
+          romaji: 'Kudasai',
+          english: 'Please (I\'ll take it)',
+          isUserLine: true,
+        ),
+      ],
+    ),
+    ConversationScenario(
+      id: 'restaurant',
+      title: 'Ordering Food',
+      lines: [
+        ScenarioLine(
+          speaker: 'Staff',
+          japanese: 'いらっしゃいませ',
+          romaji: 'Irasshaimase',
+          english: 'Welcome!',
+        ),
+        ScenarioLine(
+          speaker: 'You',
+          japanese: 'ラーメンを一つください',
+          romaji: 'Raamen wo hitotsu kudasai',
+          english: 'One ramen please',
+          isUserLine: true,
+        ),
+        ScenarioLine(
+          speaker: 'Staff',
+          japanese: 'かしこまりました',
+          romaji: 'Kashikomarimashita',
+          english: 'Certainly',
+        ),
+      ],
+    ),
+    ConversationScenario(
+      id: 'travel',
+      title: 'Asking Directions',
+      lines: [
+        ScenarioLine(
+          speaker: 'You',
+          japanese: 'すみません、駅はどこですか',
+          romaji: 'Sumimasen, eki wa doko desu ka',
+          english: 'Excuse me, where is the station?',
+          isUserLine: true,
+        ),
+        ScenarioLine(
+          speaker: 'Local',
+          japanese: 'まっすぐ行ってください',
+          romaji: 'Massugu itte kudasai',
+          english: 'Go straight',
         ),
       ],
     ),

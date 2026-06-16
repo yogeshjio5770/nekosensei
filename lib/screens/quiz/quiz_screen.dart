@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
 import '../../data/course_repository.dart';
+import '../../data/lesson_quizzes.dart';
 import '../../models/lesson_models.dart';
 import '../../providers/app_providers.dart';
 import '../../services/haptic_service.dart';
@@ -23,6 +25,8 @@ class QuizScreen extends ConsumerStatefulWidget {
 class _QuizScreenState extends ConsumerState<QuizScreen> {
   late QuizModel _quiz;
   int _currentIndex = 0;
+  int _combo = 0;
+  int _maxCombo = 0;
   final Map<String, String> _answers = {};
   String? _selectedAnswer;
   bool _showFeedback = false;
@@ -31,7 +35,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   @override
   void initState() {
     super.initState();
-    _quiz = CourseRepository.getQuizForLesson(widget.lessonId);
+    _quiz = LessonQuizzes.forLesson(widget.lessonId);
   }
 
   QuizQuestion get _currentQuestion => _quiz.questions[_currentIndex];
@@ -53,6 +57,12 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       _answers[_currentQuestion.id] = _selectedAnswer!;
       _showFeedback = true;
       _isCorrect = correct;
+      if (correct) {
+        _combo++;
+        if (_combo > _maxCombo) _maxCombo = _combo;
+      } else {
+        _combo = 0;
+      }
     });
   }
 
@@ -153,9 +163,11 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   Widget build(BuildContext context) {
     final q = _currentQuestion;
     final progress = (_currentIndex + 1) / _quiz.questions.length;
+    final bg = Theme.of(context).scaffoldBackgroundColor;
+    final surface = Theme.of(context).colorScheme.surface;
 
     return Scaffold(
-      backgroundColor: AppColors.lightBackground,
+      backgroundColor: bg,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.close),
@@ -163,99 +175,170 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         ),
         title: LessonProgressBar(progress: progress),
         titleSpacing: 8,
+        actions: [
+          if (_combo >= 2)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.accent, width: 2),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.bolt, color: AppColors.accent, size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$_combo COMBO',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryDark,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+                    .animate(key: ValueKey(_combo))
+                    .scale(curve: Curves.elasticOut, duration: 400.ms),
+              ),
+            ),
+        ],
       ),
       body: Column(
         children: [
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  NekoMascot(
-                    size: 80,
-                    mood: _showFeedback
-                        ? (_isCorrect == true
-                            ? MascotMood.excited
-                            : MascotMood.sad)
-                        : MascotMood.thinking,
-                    showSpeechBubble: _showFeedback
-                        ? (_isCorrect == true
-                            ? 'Sugoi! にゃん! 🎉'
-                            : 'Try again! You got this!')
-                        : null,
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.skillPath, width: 2),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.08, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
                     ),
-                    child: Text(
-                      q.question,
-                      style: Theme.of(context).textTheme.titleLarge,
-                      textAlign: TextAlign.center,
+                  );
+                },
+                child: Column(
+                  key: ValueKey(_currentIndex),
+                  children: [
+                    NekoMascot(
+                      size: 80,
+                      mood: _showFeedback
+                          ? (_isCorrect == true
+                              ? MascotMood.excited
+                              : MascotMood.sad)
+                          : MascotMood.thinking,
+                      showSpeechBubble: _showFeedback
+                          ? (_isCorrect == true
+                              ? (_combo >= 3
+                                  ? 'On fire! $_combo streak! 🔥'
+                                  : 'Sugoi! にゃん! 🎉')
+                              : 'Try again! You got this!')
+                          : null,
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  if (q.type == QuestionType.listening) ...[
-                    Center(
-                      child: PronunciationButton(
-                        japanese: q.correctAnswer.contains(' ')
-                            ? q.correctAnswer
-                            : _extractJapanese(q.question),
-                        audio: ref.read(audioServiceProvider),
-                        size: 72,
-                        label: 'Play audio',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  ...q.options.asMap().entries.map((entry) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: DuolingoAnswerButton(
-                        number: entry.key + 1,
-                        label: entry.value,
-                        state: _buttonState(entry.value),
-                        onTap: _showFeedback
-                            ? () {}
-                            : () => setState(() => _selectedAnswer = entry.value),
-                      ),
-                    );
-                  }),
-                  if (_showFeedback && q.explanation != null) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 24),
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: (_isCorrect == true
-                                ? AppColors.success
-                                : AppColors.error)
-                            .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: _isCorrect == true
-                              ? AppColors.success
-                              : AppColors.error,
-                          width: 2,
+                        color: surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border:
+                            Border.all(color: AppColors.skillPath, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.secondary.withValues(alpha: 0.08),
+                            offset: const Offset(0, 4),
+                            blurRadius: 12,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        q.question,
+                        style: Theme.of(context).textTheme.titleLarge,
+                        textAlign: TextAlign.center,
+                      ),
+                    ).animate().fadeIn().scale(
+                          begin: const Offset(0.95, 0.95),
+                          curve: Curves.easeOut,
+                        ),
+                    const SizedBox(height: 24),
+                    if (q.type == QuestionType.listening) ...[
+                      Center(
+                        child: PronunciationButton(
+                          japanese: q.correctAnswer.contains(' ')
+                              ? q.correctAnswer
+                              : _extractJapanese(q.question),
+                          audio: ref.read(audioServiceProvider),
+                          size: 72,
+                          label: 'Play audio',
                         ),
                       ),
-                      child: Text(q.explanation!),
-                    ),
+                      const SizedBox(height: 16),
+                    ],
+                    ...q.options.asMap().entries.map((entry) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: DuolingoAnswerButton(
+                          number: entry.key + 1,
+                          label: entry.value,
+                          state: _buttonState(entry.value),
+                          onTap: _showFeedback
+                              ? () {}
+                              : () => setState(
+                                    () => _selectedAnswer = entry.value,
+                                  ),
+                        ),
+                      )
+                          .animate(delay: (entry.key * 80).ms)
+                          .fadeIn(duration: 300.ms)
+                          .slideX(begin: 0.06, curve: Curves.easeOut);
+                    }),
+                    if (_showFeedback && q.explanation != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: (_isCorrect == true
+                                  ? AppColors.success
+                                  : AppColors.error)
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _isCorrect == true
+                                ? AppColors.success
+                                : AppColors.error,
+                            width: 2,
+                          ),
+                        ),
+                        child: Text(q.explanation!),
+                      ).animate().fadeIn().slideY(begin: 0.1),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: AppColors.skillPath, width: 2)),
+              color: surface,
+              border:
+                  Border(top: BorderSide(color: AppColors.skillPath, width: 2)),
             ),
             child: SafeArea(
               top: false,

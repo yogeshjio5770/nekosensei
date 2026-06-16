@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../config/constants.dart';
 import '../../data/course_repository.dart';
+import '../../data/expanded_content.dart';
 import '../../models/lesson_models.dart';
 import '../../widgets/practice/pronunciation_button.dart';
 import '../../services/audio_service.dart';
@@ -18,6 +20,7 @@ class LessonLearnStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final module = CourseRepository.getModule(lesson.moduleId);
+    final surface = Theme.of(context).colorScheme.surface;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -47,7 +50,8 @@ class LessonLearnStep extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(Icons.timer, size: 16, color: AppColors.lightTextSecondary),
+                    Icon(Icons.timer,
+                        size: 16, color: Theme.of(context).hintColor),
                     const SizedBox(width: 4),
                     Text(
                       '${lesson.estimatedMinutes} min • +${lesson.xpReward} XP',
@@ -58,16 +62,19 @@ class LessonLearnStep extends StatelessWidget {
               ],
             ),
           ),
-        ),
+        )
+            .animate()
+            .fadeIn(duration: 400.ms)
+            .slideY(begin: 0.08, curve: Curves.easeOutCubic),
         const SizedBox(height: 16),
-        _buildContent(context),
+        _buildContent(context, surface),
       ],
     );
   }
 
-  Widget _buildContent(BuildContext context) {
+  Widget _buildContent(BuildContext context, Color surface) {
     if (lesson.moduleId == 'hiragana' || lesson.moduleId == 'katakana') {
-      return _KanaGrid(type: lesson.moduleId);
+      return _KanaGrid(lessonId: lesson.id, type: lesson.moduleId);
     }
     if (lesson.moduleId == 'vocabulary') {
       final cat = lesson.id.replaceFirst('vocab_', '');
@@ -79,48 +86,66 @@ class LessonLearnStep extends StatelessWidget {
     if (lesson.moduleId == 'conversations') {
       return _ConversationBlock(topicId: lesson.id, audio: audio);
     }
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Text(
-          'Study the content, then listen, speak, and take the quiz!',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-      ),
+    if (lesson.moduleId == 'reading_writing') {
+      return _ReadingBlock(topicId: lesson.id);
+    }
+    if (lesson.moduleId == 'jlpt_prep') {
+      return _JlptBlock(lessonId: lesson.id);
+    }
+    return _PlaceholderCard(
+      text: 'Study the content, then listen, speak, and take the quiz!',
     );
   }
 }
 
 class _KanaGrid extends StatelessWidget {
-  const _KanaGrid({required this.type});
+  const _KanaGrid({required this.lessonId, required this.type});
+  final String lessonId;
   final String type;
 
   @override
   Widget build(BuildContext context) {
-    final chars = type == 'hiragana'
-        ? CourseRepository.hiraganaCharacters.take(20)
-        : CourseRepository.katakanaCharacters.take(20);
+    final basic = type == 'hiragana'
+        ? CourseRepository.hiraganaCharacters
+        : CourseRepository.katakanaCharacters;
+    final chars = ExpandedContent.kanaForLesson(lessonId, basic);
+    final accent = type == 'hiragana' ? AppColors.primary : AppColors.secondary;
 
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: chars.map((c) {
+      children: chars.asMap().entries.map((entry) {
+        final c = entry.value;
         return Container(
-          width: 64,
-          height: 76,
+          width: 68,
+          height: 80,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.skillPath, width: 2),
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: accent.withValues(alpha: 0.35), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: accent.withValues(alpha: 0.12),
+                offset: const Offset(0, 3),
+                blurRadius: 0,
+              ),
+            ],
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(c.character, style: const TextStyle(fontSize: 26)),
+              Text(c.character,
+                  style: TextStyle(fontSize: 28, color: accent)),
               Text(c.romaji, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
-        );
+        )
+            .animate(delay: (entry.key * 25).ms)
+            .fadeIn(duration: 300.ms)
+            .scale(
+              begin: const Offset(0.85, 0.85),
+              curve: Curves.elasticOut,
+            );
       }).toList(),
     );
   }
@@ -135,12 +160,41 @@ class _VocabList extends StatelessWidget {
   Widget build(BuildContext context) {
     final words = CourseRepository.vocabularyByCategory(category);
     return Column(
-      children: words.map((w) {
+      children: words.asMap().entries.map((entry) {
+        final w = entry.value;
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: CircleAvatar(
+              backgroundColor: AppColors.accent.withValues(alpha: 0.2),
+              child: Text(
+                w.japanese.characters.first,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+            ),
             title: Text(w.japanese, style: const TextStyle(fontSize: 22)),
-            subtitle: Text('${w.romaji} — ${w.english}'),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${w.romaji} — ${w.english}'),
+                if (w.exampleSentence != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    w.exampleSentence!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).hintColor,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ],
+            ),
             trailing: audio != null
                 ? PronunciationButton(
                     japanese: w.japanese,
@@ -149,7 +203,10 @@ class _VocabList extends StatelessWidget {
                   )
                 : null,
           ),
-        );
+        )
+            .animate(delay: (entry.key * 50).ms)
+            .fadeIn()
+            .slideX(begin: 0.05, curve: Curves.easeOut);
       }).toList(),
     );
   }
@@ -159,36 +216,15 @@ class _GrammarBlock extends StatelessWidget {
   const _GrammarBlock({required this.topicId});
   final String topicId;
 
-  static const _content = {
-    'gram_structure': (
-      'Sentence Structure (SOV)',
-      'Japanese uses Subject-Object-Verb order.\n\n私は本を読みます。\nWatashi wa hon wo yomimasu.\n"I read a book."',
-    ),
-    'gram_particles': (
-      'Particles',
-      'は (wa) = topic\nを (wo) = object\nに (ni) = direction/time\nで (de) = location/means',
-    ),
-    'gram_verbs': (
-      'Verbs',
-      'Group 1: ends in -u (行く iku)\nGroup 2: -iru/-eru (食べる taberu)\nGroup 3: する、来る',
-    ),
-  };
-
   @override
   Widget build(BuildContext context) {
-    final c = _content[topicId] ?? ('Grammar', 'Study the grammar points.');
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(c.$1, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            Text(c.$2, style: const TextStyle(fontSize: 16, height: 1.6)),
-          ],
-        ),
-      ),
+    final c = ExpandedContent.grammarTopics[topicId] ??
+        ('Grammar', 'Study the grammar points for this lesson.');
+    return _ContentCard(
+      title: c.$1,
+      body: c.$2,
+      icon: Icons.auto_stories,
+      color: AppColors.success,
     );
   }
 }
@@ -200,44 +236,162 @@ class _ConversationBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final phrases = ExpandedContent.conversationPhrases[topicId] ?? [];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Key Phrases', style: Theme.of(context).textTheme.titleLarge)
+            .animate()
+            .fadeIn(),
+        const SizedBox(height: 12),
+        ...phrases.asMap().entries.map((entry) {
+          final p = entry.value;
+          return Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(p.$1,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            )),
+                        const SizedBox(height: 4),
+                        Text('${p.$2} — ${p.$3}',
+                            style: Theme.of(context).textTheme.bodyMedium),
+                      ],
+                    ),
+                  ),
+                  if (audio != null)
+                    PronunciationButton(
+                      japanese: p.$1,
+                      audio: audio!,
+                      size: 44,
+                    ),
+                ],
+              ),
+            ),
+          )
+              .animate(delay: (entry.key * 60).ms)
+              .fadeIn()
+              .slideX(begin: 0.08);
+        }),
+      ],
+    );
+  }
+}
+
+class _ReadingBlock extends StatelessWidget {
+  const _ReadingBlock({required this.topicId});
+  final String topicId;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = ExpandedContent.readingPassages[topicId] ??
+        ('Reading', 'Read and understand the passage.');
+    return _ContentCard(
+      title: c.$1,
+      body: c.$2,
+      icon: Icons.menu_book,
+      color: const Color(0xFFCE82FF),
+    );
+  }
+}
+
+class _JlptBlock extends StatelessWidget {
+  const _JlptBlock({required this.lessonId});
+  final String lessonId;
+
+  @override
+  Widget build(BuildContext context) {
+    final (title, body) = switch (lessonId) {
+      'jlpt_vocab' => (
+          'N5 Vocabulary Review',
+          'Review ${CourseRepository.vocabulary.length} essential words across all categories.\n\nFocus on nouns, verbs, and daily expressions tested on JLPT N5.',
+        ),
+      'jlpt_grammar' => (
+          'N5 Grammar Review',
+          'Particles (は, を, に, で), ます-form verbs, い/な-adjectives, and question patterns.',
+        ),
+      'jlpt_practice' => (
+          'Full Practice Test',
+          'Simulated N5 exam: vocabulary, grammar, reading, and listening sections combined.',
+        ),
+      _ => (
+          'Timed Speed Drill',
+          'Answer quickly under pressure — just like the real JLPT time constraints!',
+        ),
+    };
+    return _ContentCard(
+      title: title,
+      body: body,
+      icon: Icons.workspace_premium,
+      color: AppColors.primary,
+    );
+  }
+}
+
+class _ContentCard extends StatelessWidget {
+  const _ContentCard({
+    required this.title,
+    required this.body,
+    required this.icon,
+    required this.color,
+  });
+
+  final String title;
+  final String body;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Key Phrases', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            for (final phrase in [
-              ('こんにちは', 'Konnichiwa', 'Hello'),
-              ('ありがとう', 'Arigatou', 'Thank you'),
-              ('すみません', 'Sumimasen', 'Excuse me'),
-            ])
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(phrase.$1,
-                              style: const TextStyle(fontSize: 20)),
-                          Text('${phrase.$2} — ${phrase.$3}'),
-                        ],
-                      ),
-                    ),
-                    if (audio != null)
-                      PronunciationButton(
-                        japanese: phrase.$1,
-                        audio: audio!,
-                        size: 40,
-                      ),
-                  ],
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: color.withValues(alpha: 0.15),
+                  child: Icon(icon, color: color),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(title,
+                      style: Theme.of(context).textTheme.titleLarge),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(body, style: const TextStyle(fontSize: 16, height: 1.65)),
           ],
         ),
+      ),
+    )
+        .animate()
+        .fadeIn(duration: 450.ms)
+        .slideY(begin: 0.06, curve: Curves.easeOutCubic);
+  }
+}
+
+class _PlaceholderCard extends StatelessWidget {
+  const _PlaceholderCard({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Text(text, style: Theme.of(context).textTheme.bodyLarge),
       ),
     );
   }

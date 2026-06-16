@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
 import '../../data/course_repository.dart';
@@ -82,7 +83,7 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
     final speech = ref.read(speechServiceProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.lightBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.close),
@@ -95,14 +96,32 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
         children: [
           LessonStepIndicator(current: _step),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: _buildStepContent(
-                lesson,
-                listenItems,
-                speakDrills,
-                audio,
-                speech,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.04),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              child: SingleChildScrollView(
+                key: ValueKey('${_step}_$_listenIndex$_speakIndex'),
+                padding: const EdgeInsets.all(16),
+                child: _buildStepContent(
+                  lesson,
+                  listenItems,
+                  speakDrills,
+                  audio,
+                  speech,
+                ),
               ),
             ),
           ),
@@ -128,11 +147,14 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
       case LessonStep.learn:
         return Column(
           children: [
-            const NekoMascot(
+            NekoMascot(
               size: 90,
               mood: MascotMood.happy,
               showSpeechBubble: 'Let\'s learn together! 一緒に勉強しよう!',
-            ),
+            )
+                .animate()
+                .fadeIn()
+                .scale(curve: Curves.elasticOut),
             const SizedBox(height: 16),
             LessonLearnStep(lesson: lesson, audio: audio),
           ],
@@ -218,7 +240,7 @@ class _BottomBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         border: Border(top: BorderSide(color: AppColors.skillPath, width: 2)),
       ),
       child: SafeArea(

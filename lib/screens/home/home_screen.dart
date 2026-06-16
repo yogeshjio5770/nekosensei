@@ -109,6 +109,7 @@ class HomeScreen extends ConsumerWidget {
                                   value: '${user.dailyStreak}',
                                   label: 'Streak',
                                   color: AppColors.warning,
+                                  animate: user.dailyStreak > 0,
                                 ),
                                 const SizedBox(width: 12),
                                 _HeaderStat(
@@ -141,14 +142,21 @@ class HomeScreen extends ConsumerWidget {
                           .fadeIn(duration: 500.ms)
                           .slideY(begin: 0.15, curve: Curves.elasticOut),
                       const SizedBox(height: 20),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: LinearProgressIndicator(
-                          value: user.progressPercentage / 100,
-                          minHeight: 14,
-                          backgroundColor: AppColors.skillPath,
-                          color: AppColors.success,
-                        ),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: user.progressPercentage / 100),
+                        duration: const Duration(milliseconds: 900),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, _) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: LinearProgressIndicator(
+                              value: value,
+                              minHeight: 14,
+                              backgroundColor: AppColors.skillPath,
+                              color: AppColors.success,
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -207,6 +215,7 @@ class _QuickActions extends StatelessWidget {
                 subtitle: '5 min',
                 color: AppColors.warning,
                 onTap: () => context.push('/daily-boost'),
+                delayMs: 0,
               ),
             ),
             const SizedBox(width: 10),
@@ -217,6 +226,7 @@ class _QuickActions extends StatelessWidget {
                 subtitle: 'SRS',
                 color: AppColors.secondary,
                 onTap: () => context.push('/quick-review'),
+                delayMs: 80,
               ),
             ),
             const SizedBox(width: 10),
@@ -227,6 +237,7 @@ class _QuickActions extends StatelessWidget {
                 subtitle: 'Role-play',
                 color: AppColors.primary,
                 onTap: () => context.push('/conversation-practice'),
+                delayMs: 160,
               ),
             ),
           ],
@@ -243,6 +254,7 @@ class _ActionCard extends StatelessWidget {
     required this.subtitle,
     required this.color,
     required this.onTap,
+    this.delayMs = 0,
   });
 
   final IconData icon;
@@ -250,6 +262,7 @@ class _ActionCard extends StatelessWidget {
   final String subtitle;
   final Color color;
   final VoidCallback onTap;
+  final int delayMs;
 
   @override
   Widget build(BuildContext context) {
@@ -283,7 +296,10 @@ class _ActionCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+    )
+        .animate(delay: delayMs.ms)
+        .fadeIn(duration: 400.ms)
+        .slideY(begin: 0.1, curve: Curves.easeOut);
   }
 }
 
@@ -293,15 +309,18 @@ class _HeaderStat extends StatelessWidget {
     required this.value,
     required this.label,
     required this.color,
+    this.animate = false,
   });
 
   final IconData icon;
   final String value;
   final String label;
   final Color color;
+  final bool animate;
 
   @override
   Widget build(BuildContext context) {
+    final iconWidget = Icon(icon, color: color, size: 22);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -311,7 +330,16 @@ class _HeaderStat extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, color: color, size: 22),
+            if (animate)
+              iconWidget
+                  .animate(onPlay: (c) => c.repeat(reverse: true))
+                  .scale(
+                    begin: const Offset(1, 1),
+                    end: const Offset(1.15, 1.15),
+                    duration: 800.ms,
+                  )
+            else
+              iconWidget,
             const SizedBox(width: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,

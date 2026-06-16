@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../config/constants.dart';
 import '../../models/lesson_models.dart';
 
@@ -33,9 +34,11 @@ class LessonStepIndicator extends StatelessWidget {
           return Expanded(
             child: Column(
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.elasticOut,
+                  width: active ? 42 : 36,
+                  height: active ? 42 : 36,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: done
@@ -49,23 +52,37 @@ class LessonStepIndicator extends StatelessWidget {
                           : active
                               ? AppColors.primaryDark
                               : AppColors.skillLocked,
-                      width: 2,
+                      width: active ? 3 : 2,
                     ),
+                    boxShadow: active
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.4),
+                              blurRadius: 12,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Icon(
                     done ? Icons.check : step.$3,
-                    color: done || active ? Colors.white : AppColors.lightTextSecondary,
-                    size: 18,
+                    color: done || active
+                        ? Colors.white
+                        : AppColors.lightTextSecondary,
+                    size: active ? 20 : 18,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  step.$2,
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 300),
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: active ? 11 : 10,
                     fontWeight: active ? FontWeight.bold : FontWeight.normal,
-                    color: active ? AppColors.primary : AppColors.lightTextSecondary,
+                    color: active
+                        ? AppColors.primary
+                        : AppColors.lightTextSecondary,
                   ),
+                  child: Text(step.$2),
                 ),
               ],
             ),

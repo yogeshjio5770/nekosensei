@@ -60,6 +60,17 @@ class SkillTreePath extends StatelessWidget {
           moduleTitle: i == 0 ? module.title : null,
         ));
       }
+
+      final moduleComplete =
+          lessons.every((l) => completedLessons.contains(l.id));
+      if (moduleComplete && lessons.isNotEmpty) {
+        result.add(SkillTreeNode(
+          lesson: lessons.last,
+          status: SkillNodeStatus.chest,
+          moduleColor: Color(module.color),
+          isModuleStart: false,
+        ));
+      }
     }
     return result;
   }
@@ -133,7 +144,7 @@ class _ModuleBanner extends StatelessWidget {
   }
 }
 
-class _SkillNodeWidget extends StatelessWidget {
+class _SkillNodeWidget extends StatefulWidget {
   const _SkillNodeWidget({
     required this.node,
     required this.alignment,
@@ -147,7 +158,47 @@ class _SkillNodeWidget extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_SkillNodeWidget> createState() => _SkillNodeWidgetState();
+}
+
+class _SkillNodeWidgetState extends State<_SkillNodeWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    if (widget.node.status == SkillNodeStatus.current) {
+      _pulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(_SkillNodeWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.node.status == SkillNodeStatus.current) {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+    } else {
+      _pulseController.stop();
+      _pulseController.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final node = widget.node;
     final status = node.status;
     final size = status == SkillNodeStatus.current ? 72.0 : 64.0;
 
@@ -174,45 +225,69 @@ class _SkillNodeWidget extends StatelessWidget {
         icon = const Icon(Icons.redeem, color: Colors.white, size: 28);
     }
 
+    final pulseScale = status == SkillNodeStatus.current
+        ? 1.0 + (_pulseController.value * 0.06)
+        : 1.0;
+
     return Align(
-      alignment: alignment,
+      alignment: widget.alignment,
       child: Transform.translate(
-        offset: Offset(offset, 0),
+        offset: Offset(widget.offset, 0),
         child: Column(
           children: [
             GestureDetector(
-              onTap: status != SkillNodeStatus.locked ? onTap : null,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: borderColor, width: 4),
-                  boxShadow: status == SkillNodeStatus.current
-                      ? [
-                          BoxShadow(
-                            color: node.moduleColor.withValues(alpha: 0.5),
-                            blurRadius: 16,
-                            spreadRadius: 2,
-                          ),
-                        ]
-                      : [
-                          BoxShadow(
-                            color: borderColor,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+              onTap: status != SkillNodeStatus.locked ? widget.onTap : null,
+              child: AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: pulseScale,
+                    child: child,
+                  );
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: size,
+                  height: size,
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: borderColor, width: 4),
+                    boxShadow: status == SkillNodeStatus.current
+                        ? [
+                            BoxShadow(
+                              color: node.moduleColor
+                                  .withValues(alpha: 0.35 + _pulseController.value * 0.2),
+                              blurRadius: 16 + _pulseController.value * 8,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : status == SkillNodeStatus.chest
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.accent.withValues(alpha: 0.5),
+                                  blurRadius: 12,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : [
+                                BoxShadow(
+                                  color: borderColor,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                  ),
+                  child: Center(child: icon),
                 ),
-                child: Center(child: icon),
               ),
             ),
             const SizedBox(height: 6),
             SizedBox(
               width: 100,
               child: Text(
-                node.lesson.title,
+                status == SkillNodeStatus.chest
+                    ? 'Bonus XP!'
+                    : node.lesson.title,
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

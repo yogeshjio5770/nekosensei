@@ -1,4 +1,5 @@
 import '../models/lesson_models.dart';
+import 'expanded_vocabulary.dart';
 
 class CourseRepository {
   static const modules = [
@@ -248,6 +249,11 @@ class CourseRepository {
   ];
 
   static List<VocabularyItem> get vocabulary => [
+    ..._coreVocabulary,
+    ...ExpandedVocabulary.extra,
+  ];
+
+  static const _coreVocabulary = [
     // Numbers
     const VocabularyItem(
       japanese: '一',
@@ -419,60 +425,6 @@ class CourseRepository {
     } catch (_) {
       return null;
     }
-  }
-
-  static QuizModel getQuizForLesson(String lessonId) {
-    return _quizzes[lessonId] ?? _defaultQuiz(lessonId);
-  }
-
-  static QuizModel _defaultQuiz(String lessonId) {
-    return QuizModel(
-      id: 'quiz_$lessonId',
-      lessonId: lessonId,
-      title: 'Lesson Quiz',
-      questions: [
-        const QuizQuestion(
-          id: 'q1',
-          type: QuestionType.multipleChoice,
-          question: 'What does こんにちは mean?',
-          correctAnswer: 'Hello',
-          options: ['Goodbye', 'Hello', 'Thank you', 'Sorry'],
-          explanation: 'こんにちは (konnichiwa) means Hello.',
-        ),
-        const QuizQuestion(
-          id: 'q2',
-          type: QuestionType.multipleChoice,
-          question: 'Which script is used for native Japanese words?',
-          correctAnswer: 'Hiragana',
-          options: ['Kanji', 'Hiragana', 'Katakana', 'Romaji'],
-          explanation: 'Hiragana is used for native Japanese words and grammar.',
-        ),
-        const QuizQuestion(
-          id: 'q3',
-          type: QuestionType.fillInBlank,
-          question: 'Fill in: 私___ 学生です。(I am a student)',
-          correctAnswer: 'は',
-          options: ['は', 'を', 'に', 'で'],
-          explanation: 'は (wa) is the topic particle.',
-        ),
-        const QuizQuestion(
-          id: 'q4',
-          type: QuestionType.listening,
-          question: 'Listen: What greeting is this? (こんにちは)',
-          correctAnswer: 'Hello',
-          options: ['Good morning', 'Hello', 'Good night', 'Goodbye'],
-          explanation: 'こんにちは (konnichiwa) — Hello (daytime).',
-        ),
-        const QuizQuestion(
-          id: 'q5',
-          type: QuestionType.multipleChoice,
-          question: 'How do you say "Thank you" politely?',
-          correctAnswer: 'ありがとうございます',
-          options: ['さようなら', 'ありがとうございます', 'すみません', 'おはよう'],
-          explanation: 'ありがとうございます — Thank you very much.',
-        ),
-      ],
-    );
   }
 
   static final _allLessons = <LessonModel>[
@@ -689,29 +641,4 @@ class CourseRepository {
       estimatedMinutes: 15,
     ),
   ];
-
-  static final _quizzes = <String, QuizModel>{
-    'hira_quiz': QuizModel(
-      id: 'quiz_hira',
-      lessonId: 'hira_quiz',
-      title: 'Hiragana Quiz',
-      questions: [
-        for (var i = 0; i < 5; i++)
-          QuizQuestion(
-            id: 'hq$i',
-            type: QuestionType.multipleChoice,
-            question: 'What is the romaji for ${hiraganaCharacters[i * 9].character}?',
-            correctAnswer: hiraganaCharacters[i * 9].romaji,
-            options: _randomRomajiOptions(hiraganaCharacters[i * 9].romaji),
-          ),
-      ],
-    ),
-  };
-
-  static List<String> _randomRomajiOptions(String correct) {
-    final all = hiraganaCharacters.map((c) => c.romaji).toSet().toList();
-    all.remove(correct);
-    all.shuffle();
-    return [correct, ...all.take(3)]..shuffle();
-  }
 }
