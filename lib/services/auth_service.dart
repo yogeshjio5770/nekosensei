@@ -27,16 +27,7 @@ class AuthService {
     if (_googleSignIn != null) return _googleSignIn;
     if (!AppBootstrap.firebaseReady) return null;
     try {
-      // Check if we're on desktop (Windows, macOS, Linux)
-      if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
-        final clientId = dotenv.env['GOOGLE_DESKTOP_CLIENT_ID'];
-        if (clientId != null) {
-          debugPrint('Using desktop Google Sign-In client ID');
-          return GoogleSignIn(clientId: clientId);
-        }
-      }
-      // Default for mobile/web
-      return GoogleSignIn();
+      return GoogleSignIn.instance;
     } catch (e) {
       debugPrint('GoogleSignIn initialization failed: $e');
       return null;
@@ -119,18 +110,31 @@ class AuthService {
         userCredential = await _auth.signInWithPopup(provider);
       } else {
         // Use google_sign_in package for mobile
-        final googleSignIn = _getGoogleSignIn();
-        if (googleSignIn == null) {
-          throw Exception('Google sign-in is not available. Please use email/password.');
-        }
+        final googleSignIn = GoogleSignIn.instance;
         
-        final googleUser = await googleSignIn.signIn();
-        if (googleUser == null) throw Exception('Google sign-in cancelled');
+        String? clientId;
+        if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+          clientId = dotenv.env['GOOGLE_DESKTOP_CLIENT_ID'];
+        }
+        if (clientId != null) {
+          await googleSignIn.initialize(clientId: clientId);
+        } else {
+          await googleSignIn.initialize();
+        }
 
-        final googleAuth = await googleUser.authentication;
+        // Authenticate the user (new API replaces signIn())
+        final googleUser = await googleSignIn.authenticate();
+
+        final googleAuth = googleUser.authentication;
+        final idToken = googleAuth.idToken;
+
+        final List<String> scopes = ['email', 'profile'];
+        final clientAuth = await googleUser.authorizationClient.authorizeScopes(scopes);
+        final accessToken = clientAuth.accessToken;
+
         final credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
+          accessToken: accessToken,
+          idToken: idToken,
         );
         userCredential = await _auth.signInWithCredential(credential);
       }
@@ -167,6 +171,15 @@ class AuthService {
     final googleSignIn = _getGoogleSignIn();
     if (googleSignIn != null && !kIsWeb) {
       try {
+        String? clientId;
+        if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+          clientId = dotenv.env['GOOGLE_DESKTOP_CLIENT_ID'];
+        }
+        if (clientId != null) {
+          await googleSignIn.initialize(clientId: clientId);
+        } else {
+          await googleSignIn.initialize();
+        }
         await googleSignIn.signOut();
       } catch (_) {}
     }

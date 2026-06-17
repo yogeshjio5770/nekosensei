@@ -347,20 +347,31 @@ class NekoLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(borderRadius),
-        color: AppColors.secondary.withValues(alpha: 0.08),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 24,
+            color: AppColors.primary.withValues(alpha: 0.35),
+            blurRadius: 28,
+            spreadRadius: 2,
             offset: const Offset(0, 8),
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
-        child: NekoMascot(size: size, mood: MascotMood.cheering),
+        child: Image.asset(
+          'assets/images/nekosensei_logo.png',
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => NekoMascot(
+            size: size,
+            mood: MascotMood.cheering,
+          ),
+        ),
       ),
     )
         .animate()
