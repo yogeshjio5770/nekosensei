@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
 import '../../models/lesson_models.dart';
 import '../../providers/app_providers.dart';
+import '../../utils/platform_layout.dart';
 import '../../widgets/common/neko_mascot.dart';
 
 class AiTutorScreen extends ConsumerStatefulWidget {
@@ -108,64 +110,81 @@ class _AiTutorScreenState extends ConsumerState<AiTutorScreen> {
       ),
       body: Column(
         children: [
-          if (_messages.isEmpty)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const NekoMascot(
-                      size: 120,
-                      mood: MascotMood.happy,
-                      showSpeechBubble: 'Ask me anything! にゃ〜',
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Chat with ${AppConstants.mascotName}',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 24),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        _SuggestionChip(
-                          label: 'Explain particle は',
-                          onTap: () => _sendMessage('Explain the particle は'),
+          Expanded(
+            child: _messages.isEmpty
+                ? Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
+                      child: Padding(
+                        padding: PlatformLayout.pagePadding(context),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const NekoMascot(
+                              size: 120,
+                              mood: MascotMood.happy,
+                              showSpeechBubble: 'Ask me anything! にゃ〜',
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Chat with ${AppConstants.mascotName}',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () => context.push('/keigo-roleplay'),
+                              icon: const Icon(Icons.theater_comedy),
+                              label: const Text('Start Keigo Roleplay Mode'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                _SuggestionChip(
+                                  label: 'Explain particle は',
+                                  onTap: () => _sendMessage('Explain the particle は'),
+                                ),
+                                _SuggestionChip(
+                                  label: 'How to introduce myself',
+                                  onTap: () =>
+                                      _sendMessage('How do I introduce myself in Japanese?'),
+                                ),
+                                _SuggestionChip(
+                                  label: 'Correct my sentence',
+                                  onTap: () => _sendMessage(
+                                    'Please correct: 私は日本語を話します',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        _SuggestionChip(
-                          label: 'How to introduce myself',
-                          onTap: () =>
-                              _sendMessage('How do I introduce myself in Japanese?'),
-                        ),
-                        _SuggestionChip(
-                          label: 'Correct my sentence',
-                          onTap: () => _sendMessage(
-                            'Please correct: 私は日本語を話します',
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
-            )
-          else
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16),
-                itemCount: _messages.length + (_isLoading ? 1 : 0),
-                itemBuilder: (_, i) {
-                  if (i == _messages.length && _isLoading) {
-                    return const _TypingIndicator();
-                  }
-                  return _MessageBubble(message: _messages[i]);
-                },
-              ),
-            ),
+                  )
+                : Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: PlatformLayout.pagePadding(context),
+                        itemCount: _messages.length + (_isLoading ? 1 : 0),
+                        itemBuilder: (_, i) {
+                          if (i == _messages.length && _isLoading) {
+                            return const _TypingIndicator();
+                          }
+                          return _MessageBubble(message: _messages[i]);
+                        },
+                      ),
+                    ),
+                  ),
+          ),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -179,30 +198,35 @@ class _AiTutorScreenState extends ConsumerState<AiTutorScreen> {
               ],
             ),
             child: SafeArea(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      decoration: InputDecoration(
-                        hintText: 'Ask a question...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          decoration: InputDecoration(
+                            hintText: 'Ask a question...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                          ),
+                          onSubmitted: (_) => _sendMessage(),
                         ),
                       ),
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        onPressed: _isLoading ? null : () => _sendMessage(),
+                        icon: const Icon(Icons.send),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: _isLoading ? null : () => _sendMessage(),
-                    icon: const Icon(Icons.send),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -224,7 +248,7 @@ class _MessageBubble extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
+          maxWidth: PlatformLayout.isWide(context) ? 560 : MediaQuery.of(context).size.width * 0.78,
         ),
         decoration: BoxDecoration(
           color: message.isUser

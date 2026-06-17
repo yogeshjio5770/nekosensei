@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 /// Speech recognition for speaking practice — compare learner vs expected.
@@ -10,30 +11,49 @@ class SpeechService {
 
   Future<bool> initialize() async {
     _available = await _speech.initialize(
-      onError: (_) {},
-      onStatus: (_) {},
+      onError: (error) => debugPrint('[Speech] Error: $error'),
+      onStatus: (status) => debugPrint('[Speech] Status: $status'),
     );
     return _available;
   }
 
   bool get isAvailable => _available;
+  bool get isListening => _speech.isListening;
 
-  Future<void> listen({
+  Future<bool> listen({
     required void Function(String text) onResult,
     required void Function(bool isListening) onListening,
     String localeId = 'ja_JP',
   }) async {
     if (!_available) await initialize();
-    if (!_available) return;
+    if (!_available) {
+      debugPrint('[Speech] Not available');
+      onListening(false);
+      return false;
+    }
 
-    await _speech.listen(
-      onResult: (result) => onResult(result.recognizedWords),
-      localeId: localeId,
-      listenMode: ListenMode.confirmation,
-      cancelOnError: true,
-      partialResults: true,
-    );
-    onListening(true);
+    try {
+      await _speech.listen(
+        onResult: (result) {
+          debugPrint('[Speech] Result: "${result.recognizedWords}", final: ${result.finalResult}');
+          onResult(result.recognizedWords);
+          if (result.finalResult) onListening(false);
+        },
+        onSoundLevelChange: (_) {},
+        localeId: localeId,
+        listenMode: ListenMode.confirmation,
+        cancelOnError: false,
+        partialResults: true,
+        listenFor: const Duration(seconds: 8),
+        pauseFor: const Duration(seconds: 3),
+      );
+      onListening(true);
+      return true;
+    } catch (e) {
+      debugPrint('[Speech] Listen failed: $e');
+      onListening(false);
+      return false;
+    }
   }
 
   Future<void> stop() async {
@@ -46,20 +66,36 @@ class SpeechService {
     final e = _normalize(expected);
     final r = romaji != null ? _normalize(romaji) : '';
 
-    if (s.isEmpty) return false;
-    if (s == e || s.contains(e) || e.contains(s)) return true;
-    if (r.isNotEmpty && (s.contains(r) || r.contains(s))) return true;
+    debugPrint('[Speech] Check: spoken="$spoken" (norm="$s"), expected="$expected" (norm="$e"), romaji="$romaji" (norm="$r")');
+
+    if (s.isEmpty) {
+      debugPrint('[Speech] Spoken is empty');
+      return false;
+    }
+    if (s == e || s.contains(e) || e.contains(s)) {
+      debugPrint('[Speech] Exact/contains match');
+      return true;
+    }
+    if (r.isNotEmpty && (s.contains(r) || r.contains(s))) {
+      debugPrint('[Speech] Romaji match');
+      return true;
+    }
 
     // Character overlap for Japanese
     final spokenChars = s.replaceAll(RegExp(r'[\s\-]'), '');
     final expectedChars = e.replaceAll(RegExp(r'[\s\-]'), '');
-    if (spokenChars.isEmpty || expectedChars.isEmpty) return false;
+    if (spokenChars.isEmpty || expectedChars.isEmpty) {
+      debugPrint('[Speech] No chars to compare');
+      return false;
+    }
 
     var matches = 0;
     for (final c in spokenChars.split('')) {
       if (expectedChars.contains(c)) matches++;
     }
-    return matches / expectedChars.length >= 0.5;
+    final ratio = matches / expectedChars.length;
+    debugPrint('[Speech] Overlap: $matches/$expectedChars.length ($ratio)');
+    return ratio >= 0.5;
   }
 
   static String _normalize(String input) =>

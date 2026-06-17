@@ -1,3 +1,4 @@
+
 // Copy to firebase_options.dart for local builds (demo mode works with placeholders).
 // Run `flutterfire configure` for production Firebase keys.
 // ignore_for_file: type=lint
@@ -21,26 +22,26 @@ class DefaultFirebaseOptions {
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'YOUR_WEB_API_KEY',
     appId: 'YOUR_WEB_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'nihongo-master',
-    authDomain: 'nihongo-master.firebaseapp.com',
-    storageBucket: 'nihongo-master.appspot.com',
+    messagingSenderId: '301384322009',
+    projectId: 'nekosensei-9a95c',
+    authDomain: 'nekosensei-9a95c.firebaseapp.com',
+    storageBucket: 'nekosensei-9a95c.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR_ANDROID_API_KEY',
-    appId: 'YOUR_ANDROID_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'nihongo-master',
-    storageBucket: 'nihongo-master.appspot.com',
+    apiKey: 'AIzaSyDzLifoxFVVQ-CNScmk9YUPebBfRgMZXtw',
+    appId: '1:301384322009:android:b7383ccfa046da2e8c67c8',
+    messagingSenderId: '301384322009',
+    projectId: 'nekosensei-9a95c',
+    storageBucket: 'nekosensei-9a95c.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'YOUR_IOS_API_KEY',
     appId: 'YOUR_IOS_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'nihongo-master',
-    storageBucket: 'nihongo-master.appspot.com',
-    iosBundleId: 'com.nihongomaster.app',
+    messagingSenderId: '301384322009',
+    projectId: 'nekosensei-9a95c',
+    storageBucket: 'nekosensei-9a95c.firebasestorage.app',
+    iosBundleId: 'com.nekosensei.app',
   );
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../config/constants.dart';
 import '../../providers/app_providers.dart';
+import '../../utils/platform_layout.dart';
 
 class ProgressScreen extends ConsumerWidget {
   const ProgressScreen({super.key});
@@ -29,134 +30,141 @@ class ProgressScreen extends ConsumerWidget {
                   (analytics['recentScores'] as List?)?.cast<int>() ?? [];
               final avgScore = analytics['averageScore'] as double? ?? 0;
 
-              return ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
+              return Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: PlatformLayout.contentWidth(context),
+                  ),
+                  child: ListView(
+                    padding: PlatformLayout.pagePadding(context),
+                    children: [
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Overall Progress',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 16),
+                              LinearProgressIndicator(
+                                value: user.progressPercentage / 100,
+                                minHeight: 12,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${user.progressPercentage.toStringAsFixed(0)}% complete',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
                         children: [
-                          Text(
-                            'Overall Progress',
-                            style: Theme.of(context).textTheme.titleLarge,
+                          Expanded(
+                            child: _MetricCard(
+                              label: 'Lessons',
+                              value: '${analytics['totalLessons'] ?? user.completedLessons.length}',
+                              icon: Icons.book,
+                            ),
                           ),
-                          const SizedBox(height: 16),
-                          LinearProgressIndicator(
-                            value: user.progressPercentage / 100,
-                            minHeight: 12,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${user.progressPercentage.toStringAsFixed(0)}% complete',
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _MetricCard(
+                              label: 'Avg Score',
+                              value: '${avgScore.toStringAsFixed(0)}%',
+                              icon: Icons.grade,
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _MetricCard(
-                          label: 'Lessons',
-                          value: '${analytics['totalLessons'] ?? user.completedLessons.length}',
-                          icon: Icons.book,
+                      const SizedBox(height: 16),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Recent Quiz Scores',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                height: 200,
+                                child: recentScores.isEmpty
+                                    ? const Center(
+                                        child: Text('Complete quizzes to see charts'),
+                                      )
+                                    : BarChart(
+                                        BarChartData(
+                                          alignment: BarChartAlignment.spaceAround,
+                                          maxY: 100,
+                                          barGroups: recentScores
+                                              .asMap()
+                                              .entries
+                                              .map(
+                                                (e) => BarChartGroupData(
+                                                  x: e.key,
+                                                  barRods: [
+                                                    BarChartRodData(
+                                                      toY: e.value.toDouble(),
+                                                      color: AppColors.primary,
+                                                      width: 16,
+                                                      borderRadius:
+                                                          const BorderRadius.vertical(
+                                                        top: Radius.circular(4),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              )
+                                              .toList(),
+                                          titlesData: FlTitlesData(show: false),
+                                          gridData: const FlGridData(show: false),
+                                          borderData: FlBorderData(show: false),
+                                        ),
+                                      ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _MetricCard(
-                          label: 'Avg Score',
-                          value: '${avgScore.toStringAsFixed(0)}%',
-                          icon: Icons.grade,
+                      const SizedBox(height: 16),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Certificates Earned',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 12),
+                              if (user.certificateLevels.isEmpty)
+                                const Text('No certificates yet')
+                              else
+                                ...user.certificateLevels.map(
+                                  (level) => Chip(
+                                    avatar: const Icon(Icons.verified, size: 18),
+                                    label: Text(
+                                      AppConstants.certificateLevels[level]
+                                              ?.title ??
+                                          level,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Recent Quiz Scores',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            height: 200,
-                            child: recentScores.isEmpty
-                                ? const Center(
-                                    child: Text('Complete quizzes to see charts'),
-                                  )
-                                : BarChart(
-                                    BarChartData(
-                                      alignment: BarChartAlignment.spaceAround,
-                                      maxY: 100,
-                                      barGroups: recentScores
-                                          .asMap()
-                                          .entries
-                                          .map(
-                                            (e) => BarChartGroupData(
-                                              x: e.key,
-                                              barRods: [
-                                                BarChartRodData(
-                                                  toY: e.value.toDouble(),
-                                                  color: AppColors.primary,
-                                                  width: 16,
-                                                  borderRadius:
-                                                      const BorderRadius.vertical(
-                                                    top: Radius.circular(4),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          )
-                                          .toList(),
-                                      titlesData: FlTitlesData(show: false),
-                                      gridData: const FlGridData(show: false),
-                                      borderData: FlBorderData(show: false),
-                                    ),
-                                  ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Certificates Earned',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 12),
-                          if (user.certificateLevels.isEmpty)
-                            const Text('No certificates yet')
-                          else
-                            ...user.certificateLevels.map(
-                              (level) => Chip(
-                                avatar: const Icon(Icons.verified, size: 18),
-                                label: Text(
-                                  AppConstants.certificateLevels[level]
-                                          ?.title ??
-                                      level,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               );
             },
           );

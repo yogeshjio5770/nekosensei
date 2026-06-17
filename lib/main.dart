@@ -5,6 +5,7 @@ import 'config/routes.dart';
 import 'config/constants.dart';
 import 'providers/app_providers.dart';
 import 'services/app_bootstrap.dart';
+import 'services/app_update_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,11 +18,25 @@ void main() async {
   runApp(const ProviderScope(child: NekoSenseiApp()));
 }
 
-class NekoSenseiApp extends ConsumerWidget {
+class NekoSenseiApp extends ConsumerStatefulWidget {
   const NekoSenseiApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NekoSenseiApp> createState() => _NekoSenseiAppState();
+}
+
+class _NekoSenseiAppState extends ConsumerState<NekoSenseiApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Check for updates after the app is initialized
+    Future.delayed(const Duration(seconds: 2), () {
+      AppUpdateService(ref).checkForUpdates();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final router = createRouter();
 
@@ -37,11 +52,16 @@ class NekoSenseiApp extends ConsumerWidget {
       },
       routerConfig: router,
       builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.noScaling,
-          ),
-          child: child ?? const SizedBox.shrink(),
+        return Stack(
+          children: [
+            MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.noScaling,
+              ),
+              child: child ?? const SizedBox.shrink(),
+            ),
+            const UpdateDialog(),
+          ],
         );
       },
     );

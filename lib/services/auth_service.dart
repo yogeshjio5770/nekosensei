@@ -1,7 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:io' show Platform;
 import '../models/user_model.dart';
+import 'app_bootstrap.dart';
 
 class AuthService {
   AuthService({
@@ -10,21 +14,51 @@ class AuthService {
     GoogleSignIn? googleSignIn,
   })  : _auth = auth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+        _googleSignIn = googleSignIn;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
-  final GoogleSignIn _googleSignIn;
+  final GoogleSignIn? _googleSignIn;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
+
+  GoogleSignIn? _getGoogleSignIn() {
+    if (_googleSignIn != null) return _googleSignIn;
+    if (!AppBootstrap.firebaseReady) return null;
+    try {
+      // Check if we're on desktop (Windows, macOS, Linux)
+      if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+        final clientId = dotenv.env['GOOGLE_DESKTOP_CLIENT_ID'];
+        if (clientId != null) {
+          debugPrint('Using desktop Google Sign-In client ID');
+          return GoogleSignIn(clientId: clientId);
+        }
+      }
+      // Default for mobile/web
+      return GoogleSignIn();
+    } catch (e) {
+      debugPrint('GoogleSignIn initialization failed: $e');
+      return null;
+    }
+  }
 
   Future<UserModel?> getCurrentUserProfile() async {
     final user = _auth.currentUser;
     if (user == null) return null;
     final doc = await _firestore.collection('users').doc(user.uid).get();
-    if (!doc.exists) return null;
-    return UserModel.fromMap(user.uid, doc.data()!);
+    if (doc.exists) {
+      return UserModel.fromMap(user.uid, doc.data()!);
+    }
+    final userModel = UserModel(
+      uid: user.uid,
+      email: user.email ?? '',
+      displayName: user.displayName ?? user.email?.split('@').first ?? 'Learner',
+      photoUrl: user.photoURL,
+      createdAt: DateTime.now(),
+    );
+    await _firestore.collection('users').doc(user.uid).set(userModel.toMap());
+    return userModel;
   }
 
   Future<UserModel> signUpWithEmail({
@@ -61,37 +95,68 @@ class AuthService {
         .doc(credential.user!.uid)
         .get();
     if (!doc.exists) {
-      throw Exception('User profile not found');
+      final userModel = UserModel(
+        uid: credential.user!.uid,
+        email: email,
+        displayName: credential.user!.displayName ?? email.split('@').first,
+        createdAt: DateTime.now(),
+      );
+      await _firestore.collection('users').doc(userModel.uid).set(userModel.toMap());
+      return userModel;
     }
     return UserModel.fromMap(credential.user!.uid, doc.data()!);
   }
 
   Future<UserModel> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) throw Exception('Google sign-in cancelled');
+    try {
+      debugPrint('Attempting Google sign-in...');
+      
+      UserCredential userCredential;
+      
+      if (kIsWeb) {
+        // Use Firebase Auth directly for Web
+        final provider = GoogleAuthProvider();
+        userCredential = await _auth.signInWithPopup(provider);
+      } else {
+        // Use google_sign_in package for mobile
+        final googleSignIn = _getGoogleSignIn();
+        if (googleSignIn == null) {
+          throw Exception('Google sign-in is not available. Please use email/password.');
+        }
+        
+        final googleUser = await googleSignIn.signIn();
+        if (googleUser == null) throw Exception('Google sign-in cancelled');
 
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-    final userCredential = await _auth.signInWithCredential(credential);
-    final uid = userCredential.user!.uid;
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        userCredential = await _auth.signInWithCredential(credential);
+      }
+      
+      final uid = userCredential.user!.uid;
+      debugPrint('Firebase sign-in successful, uid: $uid');
 
-    final doc = await _firestore.collection('users').doc(uid).get();
-    if (doc.exists) {
-      return UserModel.fromMap(uid, doc.data()!);
+      final doc = await _firestore.collection('users').doc(uid).get();
+      if (doc.exists) {
+        return UserModel.fromMap(uid, doc.data()!);
+      }
+
+      final userModel = UserModel(
+        uid: uid,
+        email: userCredential.user!.email ?? '',
+        displayName: userCredential.user!.displayName,
+        photoUrl: userCredential.user!.photoURL,
+        createdAt: DateTime.now(),
+      );
+      await _firestore.collection('users').doc(uid).set(userModel.toMap());
+      return userModel;
+    } catch (e, stackTrace) {
+      debugPrint('Google sign-in error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      throw Exception('Google sign-in failed: $e');
     }
-
-    final userModel = UserModel(
-      uid: uid,
-      email: userCredential.user!.email ?? '',
-      displayName: userCredential.user!.displayName,
-      photoUrl: userCredential.user!.photoURL,
-      createdAt: DateTime.now(),
-    );
-    await _firestore.collection('users').doc(uid).set(userModel.toMap());
-    return userModel;
   }
 
   Future<void> sendPasswordResetEmail(String email) async {
@@ -99,7 +164,13 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
+    final googleSignIn = _getGoogleSignIn();
+    if (googleSignIn != null && !kIsWeb) {
+      try {
+        await googleSignIn.signOut();
+      } catch (_) {}
+    }
+    await _auth.signOut();
   }
 
   Future<void> updateProfile({String? displayName, String? photoUrl}) async {

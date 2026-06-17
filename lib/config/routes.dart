@@ -19,9 +19,12 @@ import '../screens/exam/exam_result_screen.dart';
 import '../screens/exam/certificates_screen.dart';
 import '../screens/exam/certificate_detail_screen.dart';
 import '../screens/tutor/ai_tutor_screen.dart';
+import '../screens/tutor/keigo_roleplay_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/profile/progress_screen.dart';
 import '../screens/profile/leaderboard_screen.dart';
+import '../screens/social/dojos_screen.dart';
+import '../screens/practice/battle_screen.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
 import '../screens/admin/admin_lessons_screen.dart';
 import '../screens/admin/admin_users_screen.dart';
@@ -32,6 +35,7 @@ import '../config/page_transitions.dart';
 import '../screens/practice/conversation_practice_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/about/why_nekosensei_screen.dart';
+import '../screens/splash_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -76,6 +80,10 @@ GoRouter createRouter() {
             ),
           ),
           GoRoute(
+            path: '/leaderboard',
+            builder: (_, __) => const LeaderboardScreen(),
+          ),
+          GoRoute(
             path: '/course',
             builder: (_, __) => const CourseScreen(),
           ),
@@ -86,6 +94,18 @@ GoRouter createRouter() {
           GoRoute(
             path: '/profile',
             builder: (_, __) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: '/progress',
+            builder: (_, __) => const ProgressScreen(),
+          ),
+          GoRoute(
+            path: '/certificates',
+            builder: (_, __) => const CertificatesScreen(),
+          ),
+          GoRoute(
+            path: '/dojos',
+            builder: (_, __) => const DojosScreen(),
           ),
         ],
       ),
@@ -174,22 +194,18 @@ GoRouter createRouter() {
         ),
       ),
       GoRoute(
-        path: '/certificates',
-        builder: (_, __) => const CertificatesScreen(),
-      ),
-      GoRoute(
         path: '/certificate/:certId',
         builder: (_, state) => CertificateDetailScreen(
           certId: state.pathParameters['certId']!,
         ),
       ),
       GoRoute(
-        path: '/progress',
-        builder: (_, __) => const ProgressScreen(),
+        path: '/keigo-roleplay',
+        builder: (_, __) => const KeigoRoleplayScreen(),
       ),
       GoRoute(
-        path: '/leaderboard',
-        builder: (_, __) => const LeaderboardScreen(),
+        path: '/battle',
+        builder: (_, __) => const BattleScreen(),
       ),
       GoRoute(
         path: '/admin',

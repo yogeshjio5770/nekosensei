@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
+import '../../providers/app_providers.dart';
+import '../../services/app_bootstrap.dart';
 import '../../screens/onboarding/onboarding_screen.dart';
 import '../../widgets/common/neko_mascot.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _bounceController;
 
@@ -28,11 +31,27 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateNext() async {
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
+
     final onboarded = await OnboardingScreen.isComplete();
     if (!mounted) return;
-    context.go(onboarded ? '/login' : '/onboarding');
+
+    if (!onboarded) {
+      context.go('/onboarding');
+      return;
+    }
+
+    // Check if user is already logged in
+    if (AppBootstrap.firebaseReady) {
+      final authState = ref.read(authStateProvider);
+      if (authState.valueOrNull != null) {
+        context.go('/home');
+        return;
+      }
+    }
+
+    context.go('/login');
   }
 
   @override

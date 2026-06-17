@@ -6,6 +6,7 @@ import '../../config/constants.dart';
 import '../../data/phrases_repository.dart';
 import '../../providers/app_providers.dart';
 import '../../services/daily_lesson_service.dart';
+import '../../utils/platform_layout.dart';
 import '../../widgets/common/neko_mascot.dart';
 import '../../widgets/practice/pronunciation_button.dart';
 import '../../utils/safe_init.dart';
@@ -46,115 +47,120 @@ class _DailyBoostScreenState extends ConsumerState<DailyBoostScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Daily Boost ⚡')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.accent.withValues(alpha: 0.2),
-                    AppColors.nekoOrange.withValues(alpha: 0.15),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.bolt, color: AppColors.warning, size: 32),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${AppConstants.dailyBoostMinutes}-Min Daily Boost',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        Text(
-                          'Speak & understand real Japanese — fast!',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: PlatformLayout.contentWidth(context)),
+          child: SingleChildScrollView(
+            padding: PlatformLayout.pagePadding(context),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.accent.withValues(alpha: 0.2),
+                        AppColors.nekoOrange.withValues(alpha: 0.15),
                       ],
                     ),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ],
-              ),
-            ).animate().fadeIn().slideY(begin: 0.1),
-            const SizedBox(height: 24),
-            const NekoMascot(
-              size: 100,
-              mood: MascotMood.excited,
-              showSpeechBubble: '5 phrases today — you\'ll use these in Japan!',
-            ),
-            const SizedBox(height: 24),
-            if (_phraseIndex < phrases.length) ...[
-              _PhraseCard(
-                phrase: phrases[_phraseIndex],
-                audio: audio,
-                index: _phraseIndex + 1,
-                total: phrases.length,
-              ).animate().fadeIn().scale(curve: Curves.elasticOut),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  if (_phraseIndex > 0)
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => setState(() => _phraseIndex--),
-                        child: const Text('Back'),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.bolt, color: AppColors.warning, size: 32),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${AppConstants.dailyBoostMinutes}-Min Daily Boost',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Text(
+                              'Speak & understand real Japanese — fast!',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  if (_phraseIndex > 0) const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await audio.speakJapanese(phrases[_phraseIndex].japanese);
-                        if (_phraseIndex < phrases.length - 1) {
-                          setState(() => _phraseIndex++);
-                        } else {
-                          setState(() => _phase = 3);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.success,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: Text(
-                        _phraseIndex < phrases.length - 1
-                            ? 'NEXT PHRASE'
-                            : 'FINISH BOOST',
-                      ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ],
-            if (_phase == 3) ...[
-              const Icon(Icons.celebration, size: 64, color: AppColors.success),
-              const SizedBox(height: 16),
-              Text(
-                'Daily Boost Complete!',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              Text('+${AppConstants.xpDailyBoost} XP'),
-              const SizedBox(height: 24),
-              if (boost.lesson != null)
-                ElevatedButton(
-                  onPressed: () =>
-                      context.push('/lesson/${boost.lesson!.id}'),
-                  child: Text('Continue: ${boost.lesson!.title}'),
+                ).animate().fadeIn().slideY(begin: 0.1),
+                const SizedBox(height: 24),
+                const NekoMascot(
+                  size: 100,
+                  mood: MascotMood.excited,
+                  showSpeechBubble: '5 phrases today — you\'ll use these in Japan!',
                 ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: () => context.go('/home'),
-                child: const Text('Back to Home'),
-              ),
-            ],
-          ],
+                const SizedBox(height: 24),
+                if (_phraseIndex < phrases.length) ...[
+                  _PhraseCard(
+                    phrase: phrases[_phraseIndex],
+                    audio: audio,
+                    index: _phraseIndex + 1,
+                    total: phrases.length,
+                  ).animate().fadeIn().scale(curve: Curves.elasticOut),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      if (_phraseIndex > 0)
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => setState(() => _phraseIndex--),
+                            child: const Text('Back'),
+                          ),
+                        ),
+                      if (_phraseIndex > 0) const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            await audio.speakJapanese(phrases[_phraseIndex].japanese);
+                            if (_phraseIndex < phrases.length - 1) {
+                              setState(() => _phraseIndex++);
+                            } else {
+                              setState(() => _phase = 3);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: Text(
+                            _phraseIndex < phrases.length - 1
+                                ? 'NEXT PHRASE'
+                                : 'FINISH BOOST',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (_phase == 3) ...[
+                  const Icon(Icons.celebration, size: 64, color: AppColors.success),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Daily Boost Complete!',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  Text('+${AppConstants.xpDailyBoost} XP'),
+                  const SizedBox(height: 24),
+                  if (boost.lesson != null)
+                    ElevatedButton(
+                      onPressed: () =>
+                          context.push('/lesson/${boost.lesson!.id}'),
+                      child: Text('Continue: ${boost.lesson!.title}'),
+                    ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => context.go('/home'),
+                    child: const Text('Back to Home'),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );

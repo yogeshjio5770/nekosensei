@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
 import '../../providers/app_providers.dart';
 import '../../services/spaced_repetition_service.dart';
+import '../../utils/platform_layout.dart';
 import '../../widgets/common/neko_mascot.dart';
 import '../../widgets/practice/pronunciation_button.dart';
 import '../../widgets/practice/pronunciation_button.dart';
@@ -91,20 +92,26 @@ class _QuickReviewScreenState extends ConsumerState<QuickReviewScreen> {
       return Scaffold(
         appBar: AppBar(title: const Text('Quick Review')),
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const NekoMascot(
-                size: 120,
-                mood: MascotMood.happy,
-                showSpeechBubble: 'All caught up! にゃん!',
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Padding(
+              padding: PlatformLayout.pagePadding(context),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const NekoMascot(
+                    size: 120,
+                    mood: MascotMood.happy,
+                    showSpeechBubble: 'All caught up! にゃん!',
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () => context.pop(),
+                    child: const Text('Back'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => context.pop(),
-                child: const Text('Back'),
-              ),
-            ],
+            ),
           ),
         ),
       );
@@ -118,60 +125,65 @@ class _QuickReviewScreenState extends ConsumerState<QuickReviewScreen> {
       appBar: AppBar(
         title: Text('Review ${_index + 1}/${_items.length}'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            LinearProgressIndicator(
-              value: (_index + 1) / _items.length,
-              borderRadius: BorderRadius.circular(8),
-              minHeight: 10,
-              color: AppColors.secondary,
-            ),
-            const SizedBox(height: 32),
-            NekoMascot(
-              size: 70,
-              mood: MascotMood.thinking,
-              showSpeechBubble: 'What does this mean?',
-            ),
-            const SizedBox(height: 24),
-            Text(
-              item.japanese,
-              style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
-            ).animate().scale(curve: Curves.elasticOut),
-            const SizedBox(height: 8),
-            Text(item.romaji, style: TextStyle(color: AppColors.secondary)),
-            const SizedBox(height: 16),
-            PronunciationButton(japanese: item.japanese, audio: audio, size: 48),
-            const Spacer(),
-            if (!_showAnswer)
-              ...options.asMap().entries.map(
-                    (e) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: DuolingoAnswerButton(
-                        number: e.key + 1,
-                        label: e.value,
-                        state: _selected == e.value
-                            ? AnswerButtonState.selected
-                            : AnswerButtonState.normal,
-                        onTap: () => setState(() => _selected = e.value),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: PlatformLayout.contentWidth(context)),
+          child: Padding(
+            padding: PlatformLayout.pagePadding(context),
+            child: Column(
+              children: [
+                LinearProgressIndicator(
+                  value: (_index + 1) / _items.length,
+                  borderRadius: BorderRadius.circular(8),
+                  minHeight: 10,
+                  color: AppColors.secondary,
+                ),
+                const SizedBox(height: 32),
+                NekoMascot(
+                  size: 70,
+                  mood: MascotMood.thinking,
+                  showSpeechBubble: 'What does this mean?',
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  item.japanese,
+                  style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+                ).animate().scale(curve: Curves.elasticOut),
+                const SizedBox(height: 8),
+                Text(item.romaji, style: TextStyle(color: AppColors.secondary)),
+                const SizedBox(height: 16),
+                PronunciationButton(japanese: item.japanese, audio: audio, size: 48),
+                const Spacer(),
+                if (!_showAnswer)
+                  ...options.asMap().entries.map(
+                        (e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: DuolingoAnswerButton(
+                            number: e.key + 1,
+                            label: e.value,
+                            state: _selected == e.value
+                                ? AnswerButtonState.selected
+                                : AnswerButtonState.normal,
+                            onTap: () => setState(() => _selected = e.value),
+                          ),
+                        ),
                       ),
+                if (!_showAnswer)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _selected != null
+                          ? () {
+                              setState(() => _showAnswer = true);
+                              _answer(_selected == item.english);
+                            }
+                          : null,
+                      child: const Text('CHECK'),
                     ),
                   ),
-            if (!_showAnswer)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _selected != null
-                      ? () {
-                          setState(() => _showAnswer = true);
-                          _answer(_selected == item.english);
-                        }
-                      : null,
-                  child: const Text('CHECK'),
-                ),
-              ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );

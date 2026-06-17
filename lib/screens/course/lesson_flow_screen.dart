@@ -12,6 +12,7 @@ import '../../widgets/common/neko_mascot.dart';
 import '../../widgets/practice/lesson_step_indicator.dart';
 import '../../widgets/practice/listen_repeat_card.dart';
 import '../../widgets/practice/speak_practice_card.dart';
+import '../../utils/platform_layout.dart';
 import '../../utils/safe_init.dart';
 import 'lesson_learn_step.dart';
 
@@ -53,14 +54,14 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
       };
 
   double get _progress => switch (_step) {
-        LessonStep.learn => 0.25,
-        LessonStep.listen => 0.5,
+        LessonStep.learn => 0.2,
+        LessonStep.listen => 0.45,
         LessonStep.speak => 0.75,
         LessonStep.quiz => 1.0,
       };
 
   void _goNext() {
-    if (_step == LessonStep.speak) {
+    if (_step == LessonStep.quiz) {
       context.push('/quiz/${widget.lessonId}');
       return;
     }
@@ -92,7 +93,9 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
         title: LessonProgressBar(progress: _progress),
         titleSpacing: 8,
       ),
-      body: Column(
+      body: PlatformLayout.adaptiveScaffold(
+        context: context,
+        body: Column(
         children: [
           LessonStepIndicator(current: _step),
           Expanded(
@@ -114,7 +117,7 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
               },
               child: SingleChildScrollView(
                 key: ValueKey('${_step}_$_listenIndex$_speakIndex'),
-                padding: const EdgeInsets.all(16),
+                padding: PlatformLayout.pagePadding(context),
                 child: _buildStepContent(
                   lesson,
                   listenItems,
@@ -132,6 +135,7 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
               onPressed: _goNext,
             ),
         ],
+        ),
       ),
     );
   }
@@ -200,7 +204,7 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
         }
         if (_speakIndex >= speakDrills.length) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.push('/quiz/${widget.lessonId}');
+            setState(() => _step = LessonStep.quiz);
           });
           return const SizedBox.shrink();
         }
@@ -214,12 +218,15 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
             if (_speakIndex < speakDrills.length - 1) {
               setState(() => _speakIndex++);
             } else {
-              context.push('/quiz/${widget.lessonId}');
+              setState(() => _step = LessonStep.quiz);
             }
           },
         );
       case LessonStep.quiz:
-        return const SizedBox.shrink();
+        return _QuizReadyCard(
+          lessonTitle: lesson.title,
+          onStartQuiz: _goNext,
+        );
     }
   }
 }
@@ -279,6 +286,67 @@ class _EmptyStep extends StatelessWidget {
         const SizedBox(height: 24),
         ElevatedButton(onPressed: onContinue, child: const Text('CONTINUE')),
       ],
+    );
+  }
+}
+
+class _QuizReadyCard extends StatelessWidget {
+  const _QuizReadyCard({
+    required this.lessonTitle,
+    required this.onStartQuiz,
+  });
+
+  final String lessonTitle;
+  final VoidCallback onStartQuiz;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(
+                  Icons.school_outlined,
+                  size: 52,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Teaching complete',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You finished the learn, listen, and speak steps for "$lessonTitle". Start the quiz when you are ready.',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: onStartQuiz,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text(
+                    'START QUIZ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

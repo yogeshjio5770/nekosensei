@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/constants.dart';
@@ -89,16 +88,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 onPageChanged: (i) => setState(() => _page = i),
                 itemBuilder: (_, i) {
                   final p = _pages[i];
-                  return Padding(
+                  return SingleChildScrollView(
                     padding: const EdgeInsets.all(24),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        const SizedBox(height: 20),
                         NekoMascot(
                           size: 160,
                           mood: p.mood,
                           showSpeechBubble: p.bubble,
-                        ).animate().fadeIn().scale(curve: Curves.elasticOut),
+                        ),
                         const SizedBox(height: 32),
                         Icon(p.icon, size: 48, color: p.color),
                         const SizedBox(height: 16),
@@ -106,15 +106,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           p.title,
                           style: Theme.of(context).textTheme.headlineMedium,
                           textAlign: TextAlign.center,
-                        ).animate().fadeIn(delay: 100.ms),
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           p.subtitle,
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: AppColors.lightTextSecondary,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                           textAlign: TextAlign.center,
-                        ).animate().fadeIn(delay: 200.ms),
+                        ),
                       ],
                     ),
                   );
@@ -144,7 +144,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: FilledButton(
                   onPressed: () {
                     if (_page < _pages.length - 1) {
                       _pageController.nextPage(
@@ -155,8 +155,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       _finish();
                     }
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.success,
+                  style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: Text(

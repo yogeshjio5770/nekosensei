@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/platform_layout.dart';
 
 class ConversationScreen extends StatelessWidget {
   const ConversationScreen({super.key, required this.topicId});
@@ -41,69 +42,79 @@ class ConversationScreen extends StatelessWidget {
         ),
         body: TabBarView(
           children: [
-            ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: dialogue.length,
-              itemBuilder: (_, i) {
-                final line = dialogue[i] as Map;
-                return Align(
-                  alignment: line['speaker'] == 'A' ||
-                          line['speaker'] == 'Customer'
-                      ? Alignment.centerLeft
-                      : Alignment.centerRight,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.75,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          line['jp'] as String,
-                          style: const TextStyle(fontSize: 18),
+            Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: PlatformLayout.contentWidth(context)),
+                child: ListView.builder(
+                  padding: PlatformLayout.pagePadding(context),
+                  itemCount: dialogue.length,
+                  itemBuilder: (_, i) {
+                    final line = dialogue[i] as Map;
+                    return Align(
+                      alignment: line['speaker'] == 'A' ||
+                              line['speaker'] == 'Customer'
+                          ? Alignment.centerLeft
+                          : Alignment.centerRight,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        constraints: BoxConstraints(
+                          maxWidth: PlatformLayout.isWide(context)
+                              ? 520
+                              : MediaQuery.of(context).size.width * 0.75,
                         ),
-                        Text(line['en'] as String),
-                        IconButton(
-                          icon: const Icon(Icons.volume_up, size: 20),
-                          onPressed: () {},
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              line['jp'] as String,
+                              style: const TextStyle(fontSize: 18),
+                            ),
+                            Text(line['en'] as String),
+                            IconButton(
+                              icon: const Icon(Icons.volume_up, size: 20),
+                              onPressed: () {},
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
             Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.record_voice_over, size: 64),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Role Play Practice',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Practice the dialogue by playing each role. '
-                      'Use the AI Tutor for conversation practice!',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.mic),
-                      label: const Text('Start Role Play'),
-                    ),
-                  ],
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Padding(
+                  padding: PlatformLayout.pagePadding(context),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.record_voice_over, size: 64),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Role Play Practice',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Practice the dialogue by playing each role. '
+                        'Use the AI Tutor for conversation practice!',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.mic),
+                        label: const Text('Start Role Play'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

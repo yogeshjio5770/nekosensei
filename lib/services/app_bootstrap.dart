@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../firebase_options.dart';
 import 'audio_service.dart';
 import 'notification_service.dart';
+import 'app_update_service.dart';
 
 /// Safe app startup — never crash on missing .env or Firebase in dev.
 class AppBootstrap {

@@ -12,9 +12,6 @@ import '../services/daily_lesson_service.dart';
 import '../services/app_bootstrap.dart';
 import '../models/user_model.dart';
 
-/// Demo user for offline / no-Firebase testing — smooth zero-error experience.
-final demoUserProvider = StateProvider<UserModel?>((ref) => null);
-
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 final progressServiceProvider =
     Provider<ProgressService>((ref) => ProgressService());
@@ -41,9 +38,6 @@ final authStateProvider = StreamProvider((ref) {
 });
 
 final currentUserProvider = FutureProvider<UserModel?>((ref) async {
-  final demo = ref.watch(demoUserProvider);
-  if (demo != null) return demo;
-
   if (!AppBootstrap.firebaseReady) return null;
 
   final authState = ref.watch(authStateProvider);

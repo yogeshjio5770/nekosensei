@@ -26,33 +26,46 @@ class DuolingoAnswerButton extends StatefulWidget {
 class _DuolingoAnswerButtonState extends State<DuolingoAnswerButton> {
   bool _pressed = false;
 
-  Color get _borderColor => switch (widget.state) {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final enabled = widget.state != AnswerButtonState.disabled;
+
+    Color getBorderColor() {
+      return switch (widget.state) {
         AnswerButtonState.correct => AppColors.successDark,
         AnswerButtonState.incorrect => AppColors.errorDark,
         AnswerButtonState.selected => AppColors.secondary,
         AnswerButtonState.disabled => AppColors.skillLocked,
-        _ => const Color(0xFFD4D4D4),
+        _ => isDark ? AppColors.darkBorder : const Color(0xFFD4D4D4),
       };
+    }
 
-  Color get _bgColor => switch (widget.state) {
+    Color getBgColor() {
+      return switch (widget.state) {
         AnswerButtonState.correct => AppColors.success.withValues(alpha: 0.15),
         AnswerButtonState.incorrect => AppColors.error.withValues(alpha: 0.12),
         AnswerButtonState.selected =>
           AppColors.secondary.withValues(alpha: 0.1),
         AnswerButtonState.disabled => AppColors.skillPath,
-        _ => Colors.white,
+        _ => isDark ? AppColors.darkSurface : Colors.white,
       };
+    }
 
-  Color get _numberColor => switch (widget.state) {
+    Color getNumberColor() {
+      return switch (widget.state) {
         AnswerButtonState.correct => AppColors.success,
         AnswerButtonState.incorrect => AppColors.error,
         AnswerButtonState.selected => AppColors.secondary,
-        _ => AppColors.lightTextSecondary,
+        _ => isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
       };
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    final enabled = widget.state != AnswerButtonState.disabled;
+    Color getTextColor() {
+      return enabled
+          ? (isDark ? AppColors.darkText : AppColors.lightText)
+          : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary);
+    }
 
     Widget button = GestureDetector(
       onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
@@ -73,14 +86,14 @@ class _DuolingoAnswerButtonState extends State<DuolingoAnswerButton> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: _bgColor,
+          color: getBgColor(),
           borderRadius: BorderRadius.circular(16),
           border: Border(
-            top: BorderSide(color: _borderColor.withValues(alpha: 0.3), width: 2),
-            left: BorderSide(color: _borderColor.withValues(alpha: 0.5), width: 2),
-            right: BorderSide(color: _borderColor.withValues(alpha: 0.5), width: 2),
+            top: BorderSide(color: getBorderColor().withValues(alpha: 0.3), width: 2),
+            left: BorderSide(color: getBorderColor().withValues(alpha: 0.5), width: 2),
+            right: BorderSide(color: getBorderColor().withValues(alpha: 0.5), width: 2),
             bottom: BorderSide(
-              color: _borderColor,
+              color: getBorderColor(),
               width: _pressed && enabled ? 2 : 4,
             ),
           ),
@@ -92,14 +105,14 @@ class _DuolingoAnswerButtonState extends State<DuolingoAnswerButton> {
               height: 32,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _numberColor, width: 2),
+                border: Border.all(color: getNumberColor(), width: 2),
               ),
               child: Center(
                 child: Text(
                   '${widget.number}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: _numberColor,
+                    color: getNumberColor(),
                     fontSize: 14,
                   ),
                 ),
@@ -112,9 +125,7 @@ class _DuolingoAnswerButtonState extends State<DuolingoAnswerButton> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: enabled
-                      ? AppColors.lightText
-                      : AppColors.lightTextSecondary,
+                  color: getTextColor(),
                 ),
               ),
             ),

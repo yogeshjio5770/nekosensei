@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/platform_layout.dart';
 
 class GrammarScreen extends StatelessWidget {
   const GrammarScreen({super.key, required this.topicId});
@@ -46,33 +47,38 @@ class GrammarScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(topic['title'] as String)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          for (final section in sections)
-            Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      section['heading'] as String,
-                      style: Theme.of(context).textTheme.titleMedium,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: PlatformLayout.contentWidth(context)),
+          child: ListView(
+            padding: PlatformLayout.pagePadding(context),
+            children: [
+              for (final section in sections)
+                Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          section['heading'] as String,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(section['body'] as String),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(section['body'] as String),
-                  ],
+                  ),
                 ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {},
+                child: const Text('Practice Exercises'),
               ),
-            ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {},
-            child: const Text('Practice Exercises'),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -7,6 +7,7 @@ enum QuestionType {
   fillInBlank,
   listening,
   speaking,
+  kanjiDraw,
 }
 
 enum LessonStep { learn, listen, speak, quiz }

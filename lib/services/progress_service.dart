@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/constants.dart';
+import '../data/course_repository.dart';
 import '../models/user_model.dart';
 import '../models/lesson_models.dart';
 
@@ -25,11 +26,17 @@ class ProgressService {
         xpEarned: xpEarned,
       );
     } catch (_) {
-      // Silently skip when Firebase offline — demo mode handles locally.
+      // Silently skip when Firebase offline.
     }
   }
 
   Future<void> _completeLessonFirestore({
+    required String userId,
+    required String lessonId,
+    required String moduleId,
+    required int quizScore,
+    required int xpEarned,
+  }) async {
     final userRef = _firestore.collection('users').doc(userId);
     final progressRef = userRef.collection('progress').doc(lessonId);
 
@@ -101,12 +108,10 @@ class ProgressService {
   }
 
   Future<void> _checkModuleCompletion(String userId, String moduleId) async {
-    final moduleDoc =
-        await _firestore.collection('modules').doc(moduleId).get();
-    if (!moduleDoc.exists) return;
+    final lessons = CourseRepository.getLessonsForModule(moduleId);
+    if (lessons.isEmpty) return;
 
-    final lessonIds =
-        List<String>.from(moduleDoc.data()?['lessonIds'] ?? []);
+    final lessonIds = lessons.map((l) => l.id).toList();
     final userDoc = await _firestore.collection('users').doc(userId).get();
     final completed =
         List<String>.from(userDoc.data()?['completedLessons'] ?? []);
@@ -230,6 +235,17 @@ class ProgressService {
       }).toList();
     } catch (_) {
       return [];
+    }
+  }
+
+  Future<void> updatePetStatus(String userId, int health, int hunger) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'petHealth': health,
+        'petHunger': hunger,
+      });
+    } catch (_) {
+      // Handle offline/demo mode silently
     }
   }
 }

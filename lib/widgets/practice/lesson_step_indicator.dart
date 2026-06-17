@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../../config/constants.dart';
 import '../../models/lesson_models.dart';
 
@@ -35,8 +34,8 @@ class LessonStepIndicator extends StatelessWidget {
             child: Column(
               children: [
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.elasticOut,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
                   width: active ? 42 : 36,
                   height: active ? 42 : 36,
                   decoration: BoxDecoration(
@@ -54,15 +53,16 @@ class LessonStepIndicator extends StatelessWidget {
                               : AppColors.skillLocked,
                       width: active ? 3 : 2,
                     ),
-                    boxShadow: active
-                        ? [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.4),
-                              blurRadius: 12,
-                              spreadRadius: 1,
-                            ),
-                          ]
-                        : null,
+                    // Always keep a shadow entry — animating null → list breaks with elastic curves.
+                    boxShadow: [
+                      BoxShadow(
+                        color: active
+                            ? AppColors.primary.withValues(alpha: 0.35)
+                            : Colors.transparent,
+                        blurRadius: active ? 10 : 0,
+                        spreadRadius: active ? 1 : 0,
+                      ),
+                    ],
                   ),
                   child: Icon(
                     done ? Icons.check : step.$3,

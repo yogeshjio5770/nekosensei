@@ -11,7 +11,12 @@ import '../../services/haptic_service.dart';
 import '../../widgets/common/lesson_progress_bar.dart';
 import '../../widgets/common/neko_mascot.dart';
 import '../../widgets/practice/pronunciation_button.dart';
+import '../../utils/platform_layout.dart';
+import '../../utils/quiz_answer_checker.dart';
 import '../../widgets/quiz/duolingo_answer_button.dart';
+import '../../widgets/quiz/match_pairs_widget.dart';
+import '../../widgets/quiz/type_answer_field.dart';
+import '../../widgets/quiz/kanji_canvas.dart';
 
 class QuizScreen extends ConsumerStatefulWidget {
   const QuizScreen({super.key, required this.lessonId});
@@ -31,6 +36,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   String? _selectedAnswer;
   bool _showFeedback = false;
   bool? _isCorrect;
+  bool _matchComplete = false;
+  final _typeController = TextEditingController();
 
   @override
   void initState() {
@@ -38,12 +45,34 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     _quiz = LessonQuizzes.forLesson(widget.lessonId);
   }
 
+  @override
+  void dispose() {
+    _typeController.dispose();
+    super.dispose();
+  }
+
   QuizQuestion get _currentQuestion => _quiz.questions[_currentIndex];
 
+  bool get _canSubmit {
+    final q = _currentQuestion;
+    if (q.type == QuestionType.matchWord || q.type == QuestionType.kanjiDraw) {
+      return _matchComplete;
+    }
+    if (q.type == QuestionType.fillInBlank) {
+      return _selectedAnswer != null && _selectedAnswer!.trim().isNotEmpty;
+    }
+    return _selectedAnswer != null;
+  }
+
   Future<void> _submitAnswer() async {
-    if (_selectedAnswer == null) return;
-    final correct = _selectedAnswer!.trim().toLowerCase() ==
-        _currentQuestion.correctAnswer.trim().toLowerCase();
+    if (!_canSubmit) return;
+    final q = _currentQuestion;
+    final answer = (q.type == QuestionType.matchWord || q.type == QuestionType.kanjiDraw)
+        ? q.correctAnswer
+        : _selectedAnswer!;
+    final correct = (q.type == QuestionType.matchWord || q.type == QuestionType.kanjiDraw)
+        ? _matchComplete
+        : QuizAnswerChecker.isCorrect(answer, q.correctAnswer);
 
     if (correct) {
       await HapticService.correctAnswer();
@@ -54,7 +83,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     }
 
     setState(() {
-      _answers[_currentQuestion.id] = _selectedAnswer!;
+      _answers[q.id] = answer;
       _showFeedback = true;
       _isCorrect = correct;
       if (correct) {
@@ -73,6 +102,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         _selectedAnswer = null;
         _showFeedback = false;
         _isCorrect = null;
+        _matchComplete = false;
+        _typeController.clear();
       });
     } else {
       _finishQuiz();
@@ -82,8 +113,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   Future<void> _finishQuiz() async {
     var correct = 0;
     for (final q in _quiz.questions) {
-      if (_answers[q.id]?.trim().toLowerCase() ==
-          q.correctAnswer.trim().toLowerCase()) {
+      if (QuizAnswerChecker.isCorrect(
+        _answers[q.id] ?? '',
+        q.correctAnswer,
+      )) {
         correct++;
       }
     }
@@ -97,24 +130,15 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     final user = ref.read(currentUserProvider).value;
 
     if (user != null && passed && lesson != null) {
-      if (user.uid == 'demo_user') {
-        final updated = user.copyWith(
-          xpPoints: user.xpPoints + xp,
-          completedLessons: [...user.completedLessons, widget.lessonId],
-          dailyStreak: user.dailyStreak > 0 ? user.dailyStreak : 1,
-        );
-        ref.read(demoUserProvider.notifier).state = updated;
-      } else {
-        try {
-          await ref.read(progressServiceProvider).completeLesson(
-                userId: user.uid,
-                lessonId: widget.lessonId,
-                moduleId: lesson.moduleId,
-                quizScore: score,
-                xpEarned: xp,
-              );
-        } catch (_) {}
-      }
+      try {
+        await ref.read(progressServiceProvider).completeLesson(
+              userId: user.uid,
+              lessonId: widget.lessonId,
+              moduleId: lesson.moduleId,
+              quizScore: score,
+              xpEarned: xp,
+            );
+      } catch (_) {}
       ref.invalidate(currentUserProvider);
     }
 
@@ -213,122 +237,163 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       body: Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 350),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0.08, 0),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  );
-                },
-                child: Column(
-                  key: ValueKey(_currentIndex),
-                  children: [
-                    NekoMascot(
-                      size: 80,
-                      mood: _showFeedback
-                          ? (_isCorrect == true
-                              ? MascotMood.excited
-                              : MascotMood.sad)
-                          : MascotMood.thinking,
-                      showSpeechBubble: _showFeedback
-                          ? (_isCorrect == true
-                              ? (_combo >= 3
-                                  ? 'On fire! $_combo streak! 🔥'
-                                  : 'Sugoi! にゃん! 🎉')
-                              : 'Try again! You got this!')
-                          : null,
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: surface,
-                        borderRadius: BorderRadius.circular(20),
-                        border:
-                            Border.all(color: AppColors.skillPath, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.secondary.withValues(alpha: 0.08),
-                            offset: const Offset(0, 4),
-                            blurRadius: 12,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: PlatformLayout.contentWidth(context),
+                ),
+                child: SingleChildScrollView(
+                  padding: PlatformLayout.pagePadding(context),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 350),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0.08, 0),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Column(
+                      key: ValueKey(_currentIndex),
+                      children: [
+                        NekoMascot(
+                          size: 80,
+                          mood: _showFeedback
+                              ? (_isCorrect == true
+                                  ? MascotMood.excited
+                                  : MascotMood.sad)
+                              : MascotMood.thinking,
+                          showSpeechBubble: _showFeedback
+                              ? (_isCorrect == true
+                                  ? (_combo >= 3
+                                      ? 'On fire! $_combo streak! 🔥'
+                                      : 'Sugoi! にゃん! 🎉')
+                                  : 'Try again! You got this!')
+                              : null,
+                        ),
+                        const SizedBox(height: 24),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: surface,
+                            borderRadius: BorderRadius.circular(20),
+                            border:
+                                Border.all(color: AppColors.skillPath, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.secondary.withValues(alpha: 0.08),
+                                offset: const Offset(0, 4),
+                                blurRadius: 12,
+                              ),
+                            ],
                           ),
+                          child: Text(
+                            q.question,
+                            style: Theme.of(context).textTheme.titleLarge,
+                            textAlign: TextAlign.center,
+                          ),
+                        ).animate().fadeIn().scale(
+                              begin: const Offset(0.95, 0.95),
+                              curve: Curves.easeOut,
+                            ),
+                        const SizedBox(height: 24),
+                        if (q.type == QuestionType.listening) ...[
+                          Center(
+                            child: PronunciationButton(
+                              japanese: q.correctAnswer.contains(' ')
+                                  ? q.correctAnswer
+                                  : _extractJapanese(q.question),
+                              audio: ref.read(audioServiceProvider),
+                              size: 72,
+                              label: 'Play audio',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                         ],
-                      ),
-                      child: Text(
-                        q.question,
-                        style: Theme.of(context).textTheme.titleLarge,
-                        textAlign: TextAlign.center,
-                      ),
-                    ).animate().fadeIn().scale(
-                          begin: const Offset(0.95, 0.95),
-                          curve: Curves.easeOut,
-                        ),
-                    const SizedBox(height: 24),
-                    if (q.type == QuestionType.listening) ...[
-                      Center(
-                        child: PronunciationButton(
-                          japanese: q.correctAnswer.contains(' ')
-                              ? q.correctAnswer
-                              : _extractJapanese(q.question),
-                          audio: ref.read(audioServiceProvider),
-                          size: 72,
-                          label: 'Play audio',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    ...q.options.asMap().entries.map((entry) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: DuolingoAnswerButton(
-                          number: entry.key + 1,
-                          label: entry.value,
-                          state: _buttonState(entry.value),
-                          onTap: _showFeedback
-                              ? () {}
-                              : () => setState(
-                                    () => _selectedAnswer = entry.value,
-                                  ),
-                        ),
-                      )
-                          .animate(delay: (entry.key * 80).ms)
-                          .fadeIn(duration: 300.ms)
-                          .slideX(begin: 0.06, curve: Curves.easeOut);
-                    }),
-                    if (_showFeedback && q.explanation != null) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: (_isCorrect == true
-                                  ? AppColors.success
-                                  : AppColors.error)
-                              .withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: _isCorrect == true
-                                ? AppColors.success
-                                : AppColors.error,
-                            width: 2,
+                        if (q.type == QuestionType.matchWord &&
+                            q.matchPairs.isNotEmpty) ...[
+                          MatchPairsWidget(
+                            pairs: q.matchPairs,
+                            showFeedback: _showFeedback,
+                            isCorrect: _isCorrect == true,
+                            onComplete: () => setState(() {
+                              _matchComplete = true;
+                              _selectedAnswer = q.correctAnswer;
+                            }),
                           ),
-                        ),
-                        child: Text(q.explanation!),
-                      ).animate().fadeIn().slideY(begin: 0.1),
-                    ],
-                  ],
+                        ] else if (q.type == QuestionType.fillInBlank) ...[
+                          TypeAnswerField(
+                            controller: _typeController,
+                            wordBank: q.options,
+                            showFeedback: _showFeedback,
+                            isCorrect: _isCorrect == true,
+                            correctAnswer: q.correctAnswer,
+                            onChanged: (v) =>
+                                setState(() => _selectedAnswer = v),
+                          ),
+                        ] else if (q.type == QuestionType.kanjiDraw) ...[
+                          KanjiCanvas(
+                            kanji: q.correctAnswer,
+                            onPassed: () {
+                              setState(() {
+                                _matchComplete = true;
+                                _selectedAnswer = q.correctAnswer;
+                              });
+                              _submitAnswer();
+                            },
+                          ),
+                        ] else ...[
+                          ...q.options.asMap().entries.map((entry) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: DuolingoAnswerButton(
+                                number: entry.key + 1,
+                                label: entry.value,
+                                state: _buttonState(entry.value),
+                                onTap: _showFeedback
+                                    ? () {}
+                                    : () => setState(
+                                          () => _selectedAnswer = entry.value,
+                                        ),
+                              ),
+                            )
+                                .animate(delay: (entry.key * 80).ms)
+                                .fadeIn(duration: 300.ms)
+                                .slideX(begin: 0.06, curve: Curves.easeOut);
+                          }),
+                        ],
+                        if (_showFeedback && q.explanation != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: (_isCorrect == true
+                                      ? AppColors.success
+                                      : AppColors.error)
+                                  .withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: _isCorrect == true
+                                    ? AppColors.success
+                                    : AppColors.error,
+                                width: 2,
+                              ),
+                            ),
+                            child: Text(q.explanation!),
+                          ).animate().fadeIn().slideY(begin: 0.1),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -347,7 +412,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 child: ElevatedButton(
                   onPressed: _showFeedback
                       ? _nextQuestion
-                      : (_selectedAnswer != null ? _submitAnswer : null),
+                      : (_canSubmit ? _submitAnswer : null),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _showFeedback
                         ? AppColors.secondary

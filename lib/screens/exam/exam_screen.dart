@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
 import '../../models/lesson_models.dart';
 import '../../providers/app_providers.dart';
+import '../../utils/platform_layout.dart';
 
 class ExamScreen extends ConsumerStatefulWidget {
   const ExamScreen({super.key, required this.levelId});
@@ -133,20 +134,23 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       return Scaffold(
         appBar: AppBar(),
         body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.lock, size: 64),
-                const SizedBox(height: 16),
-                Text(_error!, textAlign: TextAlign.center),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => context.pop(),
-                  child: const Text('Go Back'),
-                ),
-              ],
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Padding(
+              padding: PlatformLayout.pagePadding(context),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.lock, size: 64),
+                  const SizedBox(height: 16),
+                  Text(_error!, textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () => context.pop(),
+                    child: const Text('Go Back'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -171,61 +175,66 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
           ],
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            LinearProgressIndicator(
-              value: (_sectionIndex * section.questions.length +
-                      _questionIndex +
-                      1) /
-                  (_exam!.sections.length * section.questions.length),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: PlatformLayout.contentWidth(context)),
+          child: Padding(
+            padding: PlatformLayout.pagePadding(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                LinearProgressIndicator(
+                  value: (_sectionIndex * section.questions.length +
+                          _questionIndex +
+                          1) /
+                      (_exam!.sections.length * section.questions.length),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Section ${_sectionIndex + 1}/${_exam!.sections.length}: ${section.title} (${section.maxMarks} marks)',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  question.question,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: ListView(
+                    children: question.options.map((option) {
+                      final isSelected = selected == option;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: OutlinedButton(
+                          onPressed: () => _selectAnswer(option),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: isSelected
+                                ? Theme.of(context).colorScheme.primaryContainer
+                                : null,
+                            padding: const EdgeInsets.all(16),
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(option),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: selected != null ? _next : null,
+                  child: Text(
+                    _sectionIndex == _exam!.sections.length - 1 &&
+                            _questionIndex == section.questions.length - 1
+                        ? 'Submit Exam'
+                        : 'Next',
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Section ${_sectionIndex + 1}/${_exam!.sections.length}: ${section.title} (${section.maxMarks} marks)',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              question.question,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: ListView(
-                children: question.options.map((option) {
-                  final isSelected = selected == option;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: OutlinedButton(
-                      onPressed: () => _selectAnswer(option),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: isSelected
-                            ? Theme.of(context).colorScheme.primaryContainer
-                            : null,
-                        padding: const EdgeInsets.all(16),
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(option),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: selected != null ? _next : null,
-              child: Text(
-                _sectionIndex == _exam!.sections.length - 1 &&
-                        _questionIndex == section.questions.length - 1
-                    ? 'Submit Exam'
-                    : 'Next',
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

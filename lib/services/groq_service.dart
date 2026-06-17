@@ -35,13 +35,14 @@ Guidelines:
   Future<String> sendMessage({
     required List<ChatMessage> history,
     required String userMessage,
+    String? customSystemPrompt,
   }) async {
     if (_apiKey.isEmpty || _apiKey == 'your_groq_api_key_here') {
       return _mockResponse(userMessage);
     }
 
     final messages = [
-      {'role': 'system', 'content': _systemPrompt},
+      {'role': 'system', 'content': customSystemPrompt ?? _systemPrompt},
       ...history.where((m) => !m.isLoading).map((m) => {
             'role': m.isUser ? 'user' : 'assistant',
             'content': m.content,

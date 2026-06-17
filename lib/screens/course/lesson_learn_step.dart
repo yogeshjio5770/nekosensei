@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../../config/constants.dart';
 import '../../data/course_repository.dart';
+import '../../utils/lesson_type.dart';
 import '../../data/expanded_content.dart';
 import '../../models/lesson_models.dart';
 import '../../widgets/practice/pronunciation_button.dart';
@@ -62,10 +62,7 @@ class LessonLearnStep extends StatelessWidget {
               ],
             ),
           ),
-        )
-            .animate()
-            .fadeIn(duration: 400.ms)
-            .slideY(begin: 0.08, curve: Curves.easeOutCubic),
+        ),
         const SizedBox(height: 16),
         _buildContent(context, surface),
       ],
@@ -73,24 +70,31 @@ class LessonLearnStep extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context, Color surface) {
-    if (lesson.moduleId == 'hiragana' || lesson.moduleId == 'katakana') {
-      return _KanaGrid(lessonId: lesson.id, type: lesson.moduleId);
+    final id = lesson.id;
+
+    if (LessonType.isKana(id)) {
+      return _KanaGrid(
+        lessonId: id,
+        type: LessonType.kanaType(id),
+      );
     }
-    if (lesson.moduleId == 'vocabulary') {
-      final cat = lesson.id.replaceFirst('vocab_', '');
-      return _VocabList(category: cat, audio: audio);
+    if (LessonType.isVocabulary(id)) {
+      return _VocabList(
+        category: LessonType.vocabCategory(id)!,
+        audio: audio,
+      );
     }
-    if (lesson.moduleId == 'grammar') {
-      return _GrammarBlock(topicId: lesson.id);
+    if (LessonType.isGrammar(id)) {
+      return _GrammarBlock(topicId: id);
     }
-    if (lesson.moduleId == 'conversations') {
-      return _ConversationBlock(topicId: lesson.id, audio: audio);
+    if (LessonType.isConversation(id)) {
+      return _ConversationBlock(topicId: id, audio: audio);
     }
-    if (lesson.moduleId == 'reading_writing') {
-      return _ReadingBlock(topicId: lesson.id);
+    if (LessonType.isReading(id)) {
+      return _ReadingBlock(topicId: id);
     }
-    if (lesson.moduleId == 'jlpt_prep') {
-      return _JlptBlock(lessonId: lesson.id);
+    if (LessonType.isJlpt(id)) {
+      return _JlptBlock(lessonId: id);
     }
     return _PlaceholderCard(
       text: 'Study the content, then listen, speak, and take the quiz!',
@@ -139,13 +143,7 @@ class _KanaGrid extends StatelessWidget {
               Text(c.romaji, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
-        )
-            .animate(delay: (entry.key * 25).ms)
-            .fadeIn(duration: 300.ms)
-            .scale(
-              begin: const Offset(0.85, 0.85),
-              curve: Curves.elasticOut,
-            );
+        );
       }).toList(),
     );
   }
@@ -203,10 +201,7 @@ class _VocabList extends StatelessWidget {
                   )
                 : null,
           ),
-        )
-            .animate(delay: (entry.key * 50).ms)
-            .fadeIn()
-            .slideX(begin: 0.05, curve: Curves.easeOut);
+        );
       }).toList(),
     );
   }
@@ -240,9 +235,7 @@ class _ConversationBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Key Phrases', style: Theme.of(context).textTheme.titleLarge)
-            .animate()
-            .fadeIn(),
+        Text('Key Phrases', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
         ...phrases.asMap().entries.map((entry) {
           final p = entry.value;
@@ -276,10 +269,7 @@ class _ConversationBlock extends StatelessWidget {
                 ],
               ),
             ),
-          )
-              .animate(delay: (entry.key * 60).ms)
-              .fadeIn()
-              .slideX(begin: 0.08);
+          );
         }),
       ],
     );
@@ -375,10 +365,7 @@ class _ContentCard extends StatelessWidget {
           ],
         ),
       ),
-    )
-        .animate()
-        .fadeIn(duration: 450.ms)
-        .slideY(begin: 0.06, curve: Curves.easeOutCubic);
+    );
   }
 }
 

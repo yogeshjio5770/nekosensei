@@ -4,6 +4,7 @@ import '../../config/constants.dart';
 import '../../data/phrases_repository.dart';
 import '../../providers/app_providers.dart';
 import '../../services/speech_service.dart';
+import '../../utils/platform_layout.dart';
 import '../../widgets/common/neko_mascot.dart';
 import '../../widgets/practice/pronunciation_button.dart';
 import '../../utils/safe_init.dart';
@@ -26,6 +27,7 @@ class _ConversationPracticeScreenState
   bool _listening = false;
   String _spoken = '';
   bool? _passed;
+  bool _speechUnavailable = false;
 
   @override
   void initState() {
@@ -45,15 +47,42 @@ class _ConversationPracticeScreenState
   ScenarioLine get _line => _scenario.lines[_lineIndex];
 
   Future<void> _speak() async {
+    final speech = ref.read(speechServiceProvider);
+    final ready = speech.isAvailable || await speech.initialize();
+    if (!ready) {
+      if (!mounted) return;
+      setState(() {
+        _speechUnavailable = true;
+        _listening = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Voice input is not available here. Use replay and continue to practise the dialogue.',
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _listening = true;
       _spoken = '';
       _passed = null;
     });
-    await ref.read(speechServiceProvider).listen(
+    final started = await speech.listen(
           onResult: (t) => setState(() => _spoken = t),
-          onListening: (_) {},
+          onListening: (isListening) {
+            if (!mounted) return;
+            setState(() => _listening = isListening);
+          },
         );
+    if (!started && mounted) {
+      setState(() {
+        _speechUnavailable = true;
+        _listening = false;
+      });
+    }
   }
 
   Future<void> _check() async {
@@ -63,7 +92,11 @@ class _ConversationPracticeScreenState
       _line.japanese,
       romaji: _line.romaji,
     );
-    if (passed) await ref.read(audioServiceProvider).playCorrect();
+    if (passed) {
+      await ref.read(audioServiceProvider).playCorrect();
+    } else {
+      await ref.read(audioServiceProvider).playWrong();
+    }
     setState(() {
       _listening = false;
       _passed = passed;
@@ -88,99 +121,111 @@ class _ConversationPracticeScreenState
 
     return Scaffold(
       appBar: AppBar(title: Text(_scenario.title)),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Text(
-              'Line ${_lineIndex + 1}/${_scenario.lines.length}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-            NekoMascot(
-              size: 80,
-              mood: _passed == true ? MascotMood.cheering : MascotMood.happy,
-              showSpeechBubble: isUser
-                  ? 'Your turn — say this line!'
-                  : 'Listen to ${line.speaker}',
-            ),
-            const Spacer(),
-            Align(
-              alignment:
-                  line.speaker == 'You' ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(context).size.width * 0.85,
-                ),
-                decoration: BoxDecoration(
-                  color: isUser
-                      ? AppColors.primary.withValues(alpha: 0.12)
-                      : AppColors.secondary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isUser ? AppColors.primary : AppColors.secondary,
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(line.speaker,
-                        style: Theme.of(context).textTheme.labelLarge),
-                    const SizedBox(height: 8),
-                    Text(line.japanese,
-                        style: const TextStyle(fontSize: 22)),
-                    Text(line.romaji),
-                    Text(line.english),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            PronunciationButton(japanese: line.japanese, audio: audio),
-            if (isUser) ...[
-              const SizedBox(height: 24),
-              if (_spoken.isNotEmpty) Text('You said: $_spoken'),
-              if (_passed != null)
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: PlatformLayout.contentWidth(context)),
+          child: Padding(
+            padding: PlatformLayout.pagePadding(context),
+            child: Column(
+              children: [
                 Text(
-                  _passed! ? 'Perfect!' : 'Try again — listen first',
-                  style: TextStyle(
-                    color: _passed! ? AppColors.success : AppColors.error,
-                    fontWeight: FontWeight.bold,
+                  'Line ${_lineIndex + 1}/${_scenario.lines.length}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 16),
+                NekoMascot(
+                  size: 80,
+                  mood: _passed == true ? MascotMood.cheering : MascotMood.happy,
+                  showSpeechBubble: isUser
+                      ? 'Your turn — replay it as much as you need.'
+                      : 'Listen to ${line.speaker}',
+                ),
+                const Spacer(),
+                Align(
+                  alignment: line.speaker == 'You'
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    decoration: BoxDecoration(
+                      color: isUser
+                          ? AppColors.primary.withValues(alpha: 0.12)
+                          : AppColors.secondary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isUser ? AppColors.primary : AppColors.secondary,
+                        width: 2,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(line.speaker,
+                            style: Theme.of(context).textTheme.labelLarge),
+                        const SizedBox(height: 8),
+                        Text(line.japanese, style: const TextStyle(fontSize: 22)),
+                        Text(line.romaji),
+                        Text(line.english),
+                      ],
+                    ),
                   ),
                 ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: _listening ? _check : _speak,
-                icon: Icon(_listening ? Icons.stop : Icons.mic),
-                label: Text(_listening ? 'CHECK' : 'SPEAK THIS LINE'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  minimumSize: const Size(double.infinity, 52),
-                ),
-              ),
-              if (_passed == true)
-                ElevatedButton(
-                  onPressed: _next,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.success,
-                    minimumSize: const Size(double.infinity, 48),
+                const SizedBox(height: 20),
+                PronunciationButton(japanese: line.japanese, audio: audio),
+                if (isUser) ...[
+                  const SizedBox(height: 24),
+                  if (_spoken.isNotEmpty) Text('You said: $_spoken'),
+                  if (_passed != null)
+                    Text(
+                      _passed! ? 'Perfect!' : 'Try again or continue after listening.',
+                      style: TextStyle(
+                        color: _passed! ? AppColors.success : AppColors.error,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  if (_speechUnavailable) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'Speech is optional here because this device/browser does not support it.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  if (!_speechUnavailable)
+                    ElevatedButton.icon(
+                      onPressed: _listening ? _check : _speak,
+                      icon: Icon(_listening ? Icons.stop : Icons.mic),
+                      label: Text(_listening ? 'CHECK' : 'TRY SPEAKING'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        minimumSize: const Size(double.infinity, 52),
+                      ),
+                    ),
+                  if (_passed == true || _speechUnavailable)
+                    ElevatedButton(
+                      onPressed: _next,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                      child: const Text('NEXT LINE'),
+                    ),
+                ] else ...[
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _next,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                    ),
+                    child: const Text('NEXT'),
                   ),
-                  child: const Text('NEXT LINE'),
-                ),
-            ] else ...[
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _next,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
-                ),
-                child: const Text('NEXT'),
-              ),
-            ],
-            const Spacer(),
-          ],
+                ],
+                const Spacer(),
+              ],
+            ),
+          ),
         ),
       ),
     );

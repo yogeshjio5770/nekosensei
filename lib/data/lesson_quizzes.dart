@@ -49,8 +49,21 @@ class LessonQuizzes {
       ));
     }
 
+    if (chars.length >= 4) {
+      final matchChars = chars.take(4).toList();
+      questions.add(QuizQuestion(
+        id: '${lessonId}_match',
+        type: QuestionType.matchWord,
+        question: 'Match each character to its romaji',
+        correctAnswer: 'matched',
+        matchPairs: {
+          for (final c in matchChars) c.character: c.romaji,
+        },
+      ));
+    }
+
     if (lessonId.endsWith('_quiz')) {
-      questions.add(const QuizQuestion(
+      questions.add(QuizQuestion(
         id: '${lessonId}_listen',
         type: QuestionType.listening,
         question: 'Listen: Which character is this? (さ)',
@@ -85,7 +98,20 @@ class LessonQuizzes {
       );
     }).toList();
 
-    if (questions.length < 5) {
+    if (words.length >= 4) {
+      final matchWords = words.take(4).toList();
+      questions.add(QuizQuestion(
+        id: 'vq_match_$category',
+        type: QuestionType.matchWord,
+        question: 'Match each Japanese word to its meaning',
+        correctAnswer: 'matched',
+        matchPairs: {
+          for (final w in matchWords) w.japanese: w.english,
+        },
+      ));
+    }
+
+    if (questions.length < 6 && words.length >= 2) {
       questions.add(QuizQuestion(
         id: 'vq_listen_$category',
         type: QuestionType.listening,
@@ -277,6 +303,18 @@ class LessonQuizzes {
           question: 'What does 人 mean?',
           correctAnswer: 'Person',
           options: ['Person', 'Tree', 'Big', 'School'],
+        ),
+        const QuizQuestion(
+          id: 'rk_draw_1',
+          type: QuestionType.kanjiDraw,
+          question: 'Draw the Kanji for "Day / Sun"',
+          correctAnswer: '日',
+        ),
+        const QuizQuestion(
+          id: 'rk_draw_2',
+          type: QuestionType.kanjiDraw,
+          question: 'Draw the Kanji for "Person"',
+          correctAnswer: '人',
         ),
         const QuizQuestion(
           id: 'rk3',

@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
 import '../../services/app_bootstrap.dart';
 import '../../providers/app_providers.dart';
-import '../../models/user_model.dart';
+import '../../utils/platform_layout.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_text_field.dart';
 import '../../widgets/common/neko_mascot.dart';
@@ -61,8 +61,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) context.go('/home');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+        // Show actual error message
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Google Sign-In Error'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Error details:\n',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    e.toString(),
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
         );
       }
     } finally {
@@ -70,30 +96,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  void _startDemo() {
-    ref.read(demoUserProvider.notifier).state = UserModel(
-      uid: 'demo_user',
-      email: 'demo@nekosensei.app',
-      displayName: 'Demo Learner',
-      xpPoints: 50,
-      dailyStreak: 1,
-      createdAt: DateTime.now(),
-    );
-    ref.read(audioServiceProvider).playSuccess();
-    context.go('/home');
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+    final wide = PlatformLayout.isWide(context);
+    final form = Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
                 const SizedBox(height: 16),
                 Center(
                   child: const NekoLogo(size: 140)
@@ -178,30 +188,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 20),
                 OutlinedButton.icon(
-                  onPressed: _isLoading ? null : _signInWithGoogle,
+                  onPressed: _isLoading || !AppBootstrap.firebaseReady
+                      ? null
+                      : _signInWithGoogle,
                   icon: const Icon(Icons.g_mobiledata, size: 28),
-                  label: const Text('Continue with Google'),
+                  label: Text(AppBootstrap.firebaseReady
+                      ? 'Continue with Google'
+                      : 'Google Sign-In Unavailable'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                     side: const BorderSide(width: 2),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _isLoading ? null : _startDemo,
-                  icon: const Icon(Icons.play_circle_outline),
-                  label: Text(
-                    AppBootstrap.firebaseReady
-                        ? 'Quick Demo Mode'
-                        : 'Try Demo — No Account Needed',
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.success,
-                    side: const BorderSide(color: AppColors.success, width: 2),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
                 const SizedBox(height: 28),
@@ -217,6 +216,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ],
                 ),
               ],
+            ),
+    );
+
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: PlatformLayout.pagePadding(context),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: wide ? 440 : double.infinity),
+              child: wide
+                  ? Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        side: BorderSide(color: AppColors.skillPath, width: 2),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: form,
+                      ),
+                    )
+                  : form,
             ),
           ),
         ),
