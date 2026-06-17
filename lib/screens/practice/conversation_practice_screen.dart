@@ -71,12 +71,18 @@ class _ConversationPracticeScreenState
       _passed = null;
     });
     final started = await speech.listen(
-          onResult: (t) => setState(() => _spoken = t),
-          onListening: (isListening) {
-            if (!mounted) return;
-            setState(() => _listening = isListening);
-          },
-        );
+      onResult: (t) {
+        if (mounted) setState(() => _spoken = t);
+      },
+      onListening: (isListening) {
+        if (!mounted) return;
+        final wasListening = _listening;
+        setState(() => _listening = isListening);
+        if (wasListening && !isListening && _spoken.isNotEmpty && _passed == null) {
+          _check();
+        }
+      },
+    );
     if (!started && mounted) {
       setState(() {
         _speechUnavailable = true;
@@ -85,7 +91,11 @@ class _ConversationPracticeScreenState
     }
   }
 
+  bool _isChecking = false;
   Future<void> _check() async {
+    if (_isChecking || _passed != null) return;
+    setState(() => _isChecking = true);
+
     await ref.read(speechServiceProvider).stop();
     final passed = SpeechService.matchesExpected(
       _spoken,
@@ -97,10 +107,13 @@ class _ConversationPracticeScreenState
     } else {
       await ref.read(audioServiceProvider).playWrong();
     }
-    setState(() {
-      _listening = false;
-      _passed = passed;
-    });
+    if (mounted) {
+      setState(() {
+        _listening = false;
+        _passed = passed;
+        _isChecking = false;
+      });
+    }
   }
 
   void _next() {

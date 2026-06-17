@@ -39,13 +39,14 @@ class SpeechService {
           onResult(result.recognizedWords);
           if (result.finalResult) onListening(false);
         },
-        onSoundLevelChange: (_) {},
-        localeId: localeId,
-        listenMode: ListenMode.confirmation,
-        cancelOnError: false,
-        partialResults: true,
-        listenFor: const Duration(seconds: 8),
-        pauseFor: const Duration(seconds: 3),
+        listenOptions: SpeechListenOptions(
+          localeId: localeId,
+          listenMode: ListenMode.confirmation,
+          cancelOnError: false,
+          partialResults: true,
+          listenFor: const Duration(seconds: 8),
+          pauseFor: const Duration(seconds: 3),
+        ),
       );
       onListening(true);
       return true;
@@ -76,8 +77,12 @@ class SpeechService {
       debugPrint('[Speech] Exact/contains match');
       return true;
     }
-    if (r.isNotEmpty && (s.contains(r) || r.contains(s))) {
-      debugPrint('[Speech] Romaji match');
+
+    // Check romaji match ignoring spaces
+    final sNoSpace = s.replaceAll(RegExp(r'\s+'), '');
+    final rNoSpace = r.replaceAll(RegExp(r'\s+'), '');
+    if (rNoSpace.isNotEmpty && (sNoSpace.contains(rNoSpace) || rNoSpace.contains(sNoSpace))) {
+      debugPrint('[Speech] Romaji exact/contains match');
       return true;
     }
 
@@ -93,11 +98,16 @@ class SpeechService {
     for (final c in spokenChars.split('')) {
       if (expectedChars.contains(c)) matches++;
     }
-    final ratio = matches / expectedChars.length;
-    debugPrint('[Speech] Overlap: $matches/$expectedChars.length ($ratio)');
-    return ratio >= 0.3;
+    
+    // Calculate ratio against the longer string to prevent short spoken strings from cheating
+    final maxLen = expectedChars.length > spokenChars.length ? expectedChars.length : spokenChars.length;
+    final ratio = matches / maxLen;
+    
+    debugPrint('[Speech] Overlap: $matches/$maxLen ($ratio)');
+    // A little more forgiving: 0.4 instead of 0.3, but based on max length
+    return ratio >= 0.4;
   }
 
   static String _normalize(String input) =>
-      input.toLowerCase().trim().replaceAll(RegExp(r'[.,!?。、！？]'), '');
+      input.toLowerCase().trim().replaceAll(RegExp(r'[.,!?。、！？\s]'), '');
 }
