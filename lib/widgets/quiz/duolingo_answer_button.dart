@@ -25,6 +25,7 @@ class DuolingoAnswerButton extends StatefulWidget {
 
 class _DuolingoAnswerButtonState extends State<DuolingoAnswerButton> {
   bool _pressed = false;
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -67,73 +68,88 @@ class _DuolingoAnswerButtonState extends State<DuolingoAnswerButton> {
           : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary);
     }
 
-    Widget button = GestureDetector(
-      onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
-      onTapUp: enabled
-          ? (_) {
-              setState(() => _pressed = false);
-              HapticService.selection();
-              widget.onTap();
-            }
-          : null,
-      onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        transform: Matrix4.translationValues(
-          0,
-          _pressed && enabled ? 4 : 0,
-          0,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: getBgColor(),
-          borderRadius: BorderRadius.circular(16),
-          border: Border(
-            top: BorderSide(color: getBorderColor().withValues(alpha: 0.3), width: 2),
-            left: BorderSide(color: getBorderColor().withValues(alpha: 0.5), width: 2),
-            right: BorderSide(color: getBorderColor().withValues(alpha: 0.5), width: 2),
-            bottom: BorderSide(
-              color: getBorderColor(),
-              width: _pressed && enabled ? 2 : 4,
-            ),
+    Widget button = MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      onEnter: enabled ? (_) => setState(() => _hovered = true) : null,
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
+        onTapUp: enabled
+            ? (_) {
+                setState(() => _pressed = false);
+                HapticService.selection();
+                widget.onTap();
+              }
+            : null,
+        onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          transform: Matrix4.translationValues(
+            0,
+            _pressed && enabled ? 4 : (_hovered && enabled ? -2 : 0),
+            0,
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: getNumberColor(), width: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: getBgColor(),
+            borderRadius: BorderRadius.circular(16),
+            border: Border(
+              top: BorderSide(color: getBorderColor().withValues(alpha: 0.3), width: 2),
+              left: BorderSide(color: getBorderColor().withValues(alpha: 0.5), width: 2),
+              right: BorderSide(color: getBorderColor().withValues(alpha: 0.5), width: 2),
+              bottom: BorderSide(
+                color: getBorderColor(),
+                width: _pressed && enabled ? 2 : 4,
               ),
-              child: Center(
-                child: Text(
-                  '${widget.number}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: getNumberColor(),
-                    fontSize: 14,
+            ),
+            boxShadow: _hovered && enabled
+                ? [
+                    BoxShadow(
+                      color: getBorderColor().withValues(alpha: 0.25),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: getNumberColor(), width: 2),
+                ),
+                child: Center(
+                  child: Text(
+                    '${widget.number}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: getNumberColor(),
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                widget.label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: getTextColor(),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: getTextColor(),
+                  ),
                 ),
               ),
-            ),
-            if (widget.state == AnswerButtonState.correct)
-              const Icon(Icons.check_circle, color: AppColors.success),
-            if (widget.state == AnswerButtonState.incorrect)
-              const Icon(Icons.cancel, color: AppColors.error),
-          ],
+              if (widget.state == AnswerButtonState.correct)
+                const Icon(Icons.check_circle, color: AppColors.success),
+              if (widget.state == AnswerButtonState.incorrect)
+                const Icon(Icons.cancel, color: AppColors.error),
+            ],
+          ),
         ),
       ),
     );

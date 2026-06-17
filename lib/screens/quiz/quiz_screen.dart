@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -256,7 +257,53 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     final bg = Theme.of(context).scaffoldBackgroundColor;
     final surface = Theme.of(context).colorScheme.surface;
 
-    return Scaffold(
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        final key = event.logicalKey;
+
+        // Enter: submit or continue
+        if (key == LogicalKeyboardKey.enter) {
+          if (_showFeedback) {
+            _nextQuestion();
+          } else if (_canSubmit) {
+            _submitAnswer();
+          }
+          return KeyEventResult.handled;
+        }
+
+        // Space: replay audio
+        if (key == LogicalKeyboardKey.space && !_showFeedback) {
+          final textToSpeak = q.type == QuestionType.listening
+              ? (q.correctAnswer.contains(' ') ? q.correctAnswer : _extractJapanese(q.question))
+              : (q.type == QuestionType.speaking ? q.correctAnswer : _extractJapanese(q.question));
+          ref.read(audioServiceProvider).speakJapanese(textToSpeak);
+          return KeyEventResult.handled;
+        }
+
+        // Number keys 1-4: select multiple choice option
+        if (!_showFeedback &&
+            q.type != QuestionType.matchWord &&
+            q.type != QuestionType.kanjiDraw &&
+            q.type != QuestionType.fillInBlank &&
+            q.type != QuestionType.speaking) {
+          final digitKeys = [
+            LogicalKeyboardKey.digit1,
+            LogicalKeyboardKey.digit2,
+            LogicalKeyboardKey.digit3,
+            LogicalKeyboardKey.digit4,
+          ];
+          final idx = digitKeys.indexOf(key);
+          if (idx >= 0 && idx < q.options.length) {
+            setState(() => _selectedAnswer = q.options[idx]);
+            return KeyEventResult.handled;
+          }
+        }
+
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
       backgroundColor: bg,
       appBar: AppBar(
         leading: IconButton(
@@ -550,6 +597,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 

@@ -119,7 +119,9 @@ class AuthService {
         if (clientId != null) {
           await googleSignIn.initialize(clientId: clientId);
         } else {
-          await googleSignIn.initialize();
+          await googleSignIn.initialize(
+            serverClientId: '301384322009-8bg83tro4d4e2j8447p2bm4fd2dt21ra.apps.googleusercontent.com',
+          );
         }
 
         // Authenticate the user (new API replaces signIn())
@@ -178,7 +180,9 @@ class AuthService {
         if (clientId != null) {
           await googleSignIn.initialize(clientId: clientId);
         } else {
-          await googleSignIn.initialize();
+          await googleSignIn.initialize(
+            serverClientId: '301384322009-8bg83tro4d4e2j8447p2bm4fd2dt21ra.apps.googleusercontent.com',
+          );
         }
         await googleSignIn.signOut();
       } catch (_) {}
