@@ -50,8 +50,8 @@ dependencies:
   vibration: ^3.2.0
 
   # App Updates
-  ota_update: ^4.0.1
   package_info_plus: ^8.1.0
+  url_launcher: ^6.3.1
 
   # PDF & QR
   pdf: ^3.11.1

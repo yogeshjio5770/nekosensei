@@ -30,8 +30,11 @@ class _NekoSenseiAppState extends ConsumerState<NekoSenseiApp> {
   void initState() {
     super.initState();
     // Check for updates after the app is initialized
-    Future.delayed(const Duration(seconds: 2), () {
-      AppUpdateService(ref).checkForUpdates();
+    Future.delayed(const Duration(seconds: 2), () async {
+      final update = await AppUpdateService.checkForUpdates();
+      if (update != null && mounted) {
+        ref.read(updateProvider.notifier).state = update;
+      }
     });
   }
 

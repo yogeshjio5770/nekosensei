@@ -1,11 +1,10 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import 'package:ota_update/ota_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // Provider to manage update state
 final updateProvider = StateProvider<Map<String, dynamic>?>((ref) => null);
@@ -15,15 +14,7 @@ class AppUpdateService {
   static const String githubOwner = 'yogeshjio5770';
   static const String githubRepo = 'nekosensei';
 
-  final Ref ref;
-
-  AppUpdateService(this.ref);
-
-  Future<void> checkForUpdates() async {
-    if (!Platform.isAndroid) {
-      return;
-    }
-
+  static Future<Map<String, dynamic>?> checkForUpdates() async {
     try {
       // Fetch the latest release from GitHub
       final response = await http.get(
@@ -43,7 +34,7 @@ class AppUpdateService {
           final currentVersion = currentPackage.version;
 
           if (_isVersionGreater(latestVersion, currentVersion)) {
-            ref.read(updateProvider.notifier).state = {
+            return {
               'version': latestVersion,
               'url': apkAsset['browser_download_url'] as String,
             };
@@ -53,9 +44,10 @@ class AppUpdateService {
     } catch (e) {
       debugPrint('Update check failed: $e');
     }
+    return null;
   }
 
-  bool _isVersionGreater(String latest, String current) {
+  static bool _isVersionGreater(String latest, String current) {
     // Remove 'v' prefix if present
     final cleanLatest = latest.replaceFirst('v', '');
     final cleanCurrent = current.replaceFirst('v', '');
@@ -71,17 +63,6 @@ class AppUpdateService {
       }
     }
     return latestParts.length > currentParts.length;
-  }
-
-  Future<void> installUpdate(String apkUrl) async {
-    try {
-      await OtaUpdate().execute(
-        apkUrl,
-        destinationName: 'app-update.apk',
-      );
-    } catch (e) {
-      debugPrint('Update failed: $e');
-    }
   }
 }
 
@@ -108,11 +89,14 @@ class UpdateDialog extends ConsumerWidget {
           child: const Text('Later'),
         ),
         ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
+            final url = Uri.parse(update['url']);
+            if (await canLaunchUrl(url)) {
+              await launchUrl(url, mode: LaunchMode.externalApplication);
+            }
             ref.read(updateProvider.notifier).state = null;
-            AppUpdateService(ref).installUpdate(update['url']);
           },
-          child: const Text('Update Now'),
+          child: const Text('Download'),
         ),
       ],
     );
