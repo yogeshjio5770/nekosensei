@@ -1,18 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// Service for using Hugging Face Whisper for speech recognition
+/// Service for using self-hosted Hugging Face Whisper for speech recognition
 class HuggingFaceService {
   final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
   bool _isRecording = false;
   String? _audioPath;
 
-  final String _apiKey = dotenv.env['HUGGING_FACE_API_KEY'] ?? '';
-  final String _modelUrl = 'https://api-inference.huggingface.co/models/openai/whisper-large-v3-turbo';
+  // TODO: Replace this with your actual Hugging Face Space URL!
+  // Example: 'https://your-username-nekosensei-whisper-api.hf.space/transcribe'
+  final String _apiUrl = 'https://your-username-nekosensei-whisper-api.hf.space/transcribe';
 
   Future<void> initialize() async {
     await _recorder.openRecorder();
@@ -48,16 +48,13 @@ class HuggingFaceService {
       final file = File(_audioPath!);
       if (!await file.exists()) return null;
 
-      final bytes = await file.readAsBytes();
+      // Create multipart request
+      final request = http.MultipartRequest('POST', Uri.parse(_apiUrl));
+      request.files.add(await http.MultipartFile.fromPath('file', _audioPath!));
 
-      final response = await http.post(
-        Uri.parse(_modelUrl),
-        headers: {
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'audio/wav',
-        },
-        body: bytes,
-      );
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
