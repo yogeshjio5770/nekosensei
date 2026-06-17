@@ -30,6 +30,7 @@
 | AI tutor | Paid (Max) | **NekoSensei AI included** |
 | Certificates | Streak badges | **JLPT PDF certificates + QR** |
 | Daily learning | Streak | **5-min Daily Boost + SRS review** |
+| Updates | App Store delays | **In-app updates (GitHub releases)** |
 
 > **Duolingo teaches you to tap. NekoSensei teaches you to speak.**
 
@@ -47,8 +48,19 @@
 - **Conversation role-play** — speak real dialogues
 - **AI tutor** — Groq-powered NekoSensei chat
 - **JLPT certificates** — N5, N4, N3 with downloadable PDF
-- **Demo mode** — try without Firebase setup
+- **In-app updates** — auto-checks GitHub for new releases
+- **Persistent login** — stay logged in
 - **Dark mode** — full theme support
+
+---
+
+## Download & Try
+
+### Android APK
+Download the latest APK from [GitHub Releases](https://github.com/yogeshjio5770/nekosensei/releases)
+
+### Web App
+Try the web version live at: https://yogeshjio5770.github.io/nekosensei/
 
 ---
 
@@ -64,34 +76,15 @@ _Add screenshots after first `flutter run` on device._
 
 - [Flutter SDK](https://flutter.dev/docs/get-started/install) 3.2+
 - Android Studio / Xcode (for mobile)
-- Optional: Firebase project, Groq API key
+- Firebase project, Groq API key (for full features)
 
-### Run in 2 minutes (Demo mode)
+### Run the app
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/nekosensei.git
+git clone https://github.com/yogeshjio5770/nekosensei.git
 cd nekosensei
 cp lib/firebase_options.example.dart lib/firebase_options.dart
 flutter pub get
-flutter run
-```
-
-On login → tap **"Try Demo — No Account Needed"**
-
-### Full setup
-
-```bash
-# Platform folders
-flutter create --project-name nihongo_master --org com.nekosensei .
-
-# Firebase
-dart pub global activate flutterfire_cli
-flutterfire configure
-
-# Environment
-cp .env.example .env
-# Add GROQ_API_KEY to .env
-
 flutter run
 ```
 
@@ -122,6 +115,7 @@ lib/
 | Speech | flutter_tts, speech_to_text |
 | Charts | fl_chart |
 | PDF | pdf, printing |
+| Updates | GitHub releases + in-app prompts |
 
 ---
 
