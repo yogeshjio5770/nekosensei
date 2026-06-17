@@ -7,6 +7,7 @@ import '../services/exam_service.dart';
 import '../services/certificate_service.dart';
 import '../services/audio_service.dart';
 import '../services/speech_service.dart';
+import '../services/hugging_face_service.dart';
 import '../services/spaced_repetition_service.dart';
 import '../services/daily_lesson_service.dart';
 import '../services/app_bootstrap.dart';
@@ -25,6 +26,11 @@ final audioServiceProvider = Provider<AudioService>((ref) {
   return service;
 });
 final speechServiceProvider = Provider<SpeechService>((ref) => SpeechService());
+final huggingFaceServiceProvider = Provider<HuggingFaceService>((ref) {
+  final service = HuggingFaceService();
+  ref.onDispose(service.dispose);
+  return service;
+});
 final spacedRepetitionProvider =
     Provider<SpacedRepetitionService>((ref) => SpacedRepetitionService());
 final dailyLessonProvider =

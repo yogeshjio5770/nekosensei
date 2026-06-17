@@ -8,7 +8,7 @@ import '../../data/lesson_quizzes.dart';
 import '../../models/lesson_models.dart';
 import '../../providers/app_providers.dart';
 import '../../services/haptic_service.dart';
-import '../../services/speech_service.dart';
+import '../../services/hugging_face_service.dart';
 import '../../widgets/common/lesson_progress_bar.dart';
 import '../../widgets/common/neko_mascot.dart';
 import '../../widgets/practice/pronunciation_button.dart';
@@ -41,6 +41,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   final _typeController = TextEditingController();
   bool _listening = false;
   String _spokenText = '';
+  bool _initializing = false;
 
   @override
   void initState() {
@@ -71,28 +72,53 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   }
 
   Future<void> _startListening() async {
-    final speechService = ref.read(speechServiceProvider);
-    if (!speechService.isAvailable) await speechService.initialize();
-    if (!speechService.isAvailable) return;
+    final hfService = ref.read(huggingFaceServiceProvider);
+    
+    if (_initializing) return;
     
     setState(() {
-      _listening = true;
-      _spokenText = '';
+      _initializing = true;
     });
-    
-    await speechService.listen(
-      onResult: (text) {
-        if (mounted) setState(() => _spokenText = text);
-      },
-      onListening: (isListening) {
-        if (mounted) setState(() => _listening = isListening);
-      },
-    );
+
+    try {
+      await hfService.initialize();
+      final started = await hfService.startRecording();
+      
+      if (started && mounted) {
+        setState(() {
+          _listening = true;
+          _spokenText = '';
+          _initializing = false;
+        });
+      } else if (mounted) {
+        setState(() {
+          _initializing = false;
+        });
+      }
+    } catch (e) {
+      print('[QuizScreen] Error: $e');
+      if (mounted) {
+        setState(() {
+          _initializing = false;
+        });
+      }
+    }
   }
   
   Future<void> _stopListening() async {
-    final speechService = ref.read(speechServiceProvider);
-    await speechService.stop();
+    final hfService = ref.read(huggingFaceServiceProvider);
+    
+    setState(() {
+      _listening = false;
+    });
+
+    final transcribedText = await hfService.stopAndTranscribe();
+    
+    if (transcribedText != null && mounted) {
+      setState(() {
+        _spokenText = transcribedText;
+      });
+    }
   }
 
   Future<void> _submitAnswer() async {
@@ -383,9 +409,19 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                                   ),
                                 const SizedBox(height: 8),
                                 ElevatedButton.icon(
-                                  onPressed: _listening ? _stopListening : _startListening,
-                                  icon: Icon(_listening ? Icons.stop : Icons.mic),
-                                  label: Text(_listening ? 'Stop' : 'Try Speaking'),
+                                  onPressed: _initializing 
+                                      ? null 
+                                      : (_listening ? _stopListening : _startListening),
+                                  icon: _initializing 
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : Icon(_listening ? Icons.stop : Icons.mic),
+                                  label: Text(_initializing 
+                                      ? 'LOADING...' 
+                                      : (_listening ? 'Stop' : 'Try Speaking')),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: _listening ? AppColors.error : AppColors.primary,
                                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),

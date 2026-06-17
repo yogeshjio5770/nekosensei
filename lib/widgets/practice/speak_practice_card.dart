@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/constants.dart';
 import '../../services/audio_service.dart';
 import '../../services/daily_lesson_service.dart';
 import '../../services/haptic_service.dart';
-import '../../services/speech_service.dart';
+import '../../services/hugging_face_service.dart';
+import '../../providers/app_providers.dart';
 import '../common/neko_mascot.dart';
 import 'pronunciation_button.dart';
 
 /// Speak step: listen first → optional reveal → speak → feedback stays until CONTINUE.
-class SpeakPracticeCard extends StatefulWidget {
+class SpeakPracticeCard extends ConsumerStatefulWidget {
   const SpeakPracticeCard({
     super.key,
     required this.drill,
     required this.audio,
-    required this.speech,
     required this.onComplete,
     this.index = 0,
     this.total = 1,
@@ -22,22 +23,22 @@ class SpeakPracticeCard extends StatefulWidget {
 
   final SpeakDrill drill;
   final AudioService audio;
-  final SpeechService speech;
   final void Function(bool success) onComplete;
   final int index;
   final int total;
 
   @override
-  State<SpeakPracticeCard> createState() => _SpeakPracticeCardState();
+  ConsumerState<SpeakPracticeCard> createState() => _SpeakPracticeCardState();
 }
 
-class _SpeakPracticeCardState extends State<SpeakPracticeCard> {
+class _SpeakPracticeCardState extends ConsumerState<SpeakPracticeCard> {
   bool _listening = false;
   String _spoken = '';
   bool? _passed;
   bool _showText = false;
   int _listenCount = 0;
   bool _speechUnavailable = false;
+  bool _initializing = false;
 
   bool get _canContinue => true;
 
@@ -47,51 +48,63 @@ class _SpeakPracticeCardState extends State<SpeakPracticeCard> {
   }
 
   Future<void> _startListening() async {
-    final ready = widget.speech.isAvailable || await widget.speech.initialize();
-    if (!ready) {
+    final hfService = ref.read(huggingFaceServiceProvider);
+    
+    if (_initializing) return;
+    
+    setState(() {
+      _initializing = true;
+      _speechUnavailable = false;
+    });
+
+    try {
+      await hfService.initialize();
+      final started = await hfService.startRecording();
+      
+      if (!started) {
+        if (!mounted) return;
+        setState(() {
+          _speechUnavailable = true;
+          _listening = false;
+          _initializing = false;
+        });
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _listening = true;
+        _spoken = '';
+        _passed = null;
+        _initializing = false;
+      });
+    } catch (e) {
+      print('[SpeakCard] Error: $e');
       if (!mounted) return;
       setState(() {
         _speechUnavailable = true;
         _listening = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Speech recognition is not available here. You can keep listening and continue to the quiz.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _listening = true;
-      _spoken = '';
-      _passed = null;
-    });
-
-    final started = await widget.speech.listen(
-      onResult: (text) => setState(() => _spoken = text),
-      onListening: (isListening) {
-        if (!mounted) return;
-        setState(() => _listening = isListening);
-      },
-    );
-    if (!started && mounted) {
-      setState(() {
-        _speechUnavailable = true;
-        _listening = false;
+        _initializing = false;
       });
     }
   }
 
   Future<void> _stopAndCheck() async {
-    await widget.speech.stop();
-    final passed = SpeechService.matchesExpected(
-      _spoken,
-      widget.drill.japanese,
-      romaji: widget.drill.romaji,
-    );
+    final hfService = ref.read(huggingFaceServiceProvider);
+    
+    setState(() {
+      _listening = false;
+    });
+
+    final transcribedText = await hfService.stopAndTranscribe();
+    
+    if (transcribedText != null && mounted) {
+      setState(() {
+        _spoken = transcribedText;
+      });
+    }
+
+    final passed = _spoken.isNotEmpty;
 
     if (passed) {
       await HapticService.correctAnswer();
@@ -101,11 +114,12 @@ class _SpeakPracticeCardState extends State<SpeakPracticeCard> {
       await widget.audio.playWrong();
     }
 
-    setState(() {
-      _listening = false;
-      _passed = passed;
-      _showText = true;
-    });
+    if (mounted) {
+      setState(() {
+        _passed = passed;
+        _showText = true;
+      });
+    }
   }
 
   @override
@@ -271,9 +285,19 @@ class _SpeakPracticeCardState extends State<SpeakPracticeCard> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _listening ? _stopAndCheck : _startListening,
-              icon: Icon(_listening ? Icons.stop : Icons.mic),
-              label: Text(_listening ? 'STOP & CHECK' : 'TRY SPEAKING'),
+              onPressed: _initializing 
+                  ? null 
+                  : (_listening ? _stopAndCheck : _startListening),
+              icon: _initializing 
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Icon(_listening ? Icons.stop : Icons.mic),
+              label: Text(_initializing 
+                  ? 'LOADING...' 
+                  : (_listening ? 'STOP & CHECK' : 'TRY SPEAKING')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _listening ? AppColors.error : AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),

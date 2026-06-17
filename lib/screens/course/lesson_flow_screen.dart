@@ -81,7 +81,6 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
     final listenItems = _dailyService.getListenItemsForLesson(widget.lessonId);
     final speakDrills = _dailyService.getSpeakDrillsForLesson(widget.lessonId);
     final audio = ref.read(audioServiceProvider);
-    final speech = ref.read(speechServiceProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -123,7 +122,6 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
                   listenItems,
                   speakDrills,
                   audio,
-                  speech,
                 ),
               ),
             ),
@@ -145,7 +143,6 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
     List<ListenItem> listenItems,
     List<SpeakDrill> speakDrills,
     dynamic audio,
-    dynamic speech,
   ) {
     switch (_step) {
       case LessonStep.learn:
@@ -211,7 +208,6 @@ class _LessonFlowScreenState extends ConsumerState<LessonFlowScreen> {
         return SpeakPracticeCard(
           drill: speakDrills[_speakIndex],
           audio: audio,
-          speech: speech,
           index: _speakIndex,
           total: speakDrills.length,
           onComplete: (_) {
