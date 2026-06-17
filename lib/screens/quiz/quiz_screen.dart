@@ -8,6 +8,7 @@ import '../../data/lesson_quizzes.dart';
 import '../../models/lesson_models.dart';
 import '../../providers/app_providers.dart';
 import '../../services/haptic_service.dart';
+import '../../services/speech_service.dart';
 import '../../widgets/common/lesson_progress_bar.dart';
 import '../../widgets/common/neko_mascot.dart';
 import '../../widgets/practice/pronunciation_button.dart';
@@ -38,6 +39,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   bool? _isCorrect;
   bool _matchComplete = false;
   final _typeController = TextEditingController();
+  bool _listening = false;
+  String _spokenText = '';
 
   @override
   void initState() {
@@ -55,6 +58,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
   bool get _canSubmit {
     final q = _currentQuestion;
+    if (q.type == QuestionType.speaking) {
+      return true; // Always allow submitting speaking questions
+    }
     if (q.type == QuestionType.matchWord || q.type == QuestionType.kanjiDraw) {
       return _matchComplete;
     }
@@ -64,15 +70,49 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     return _selectedAnswer != null;
   }
 
+  Future<void> _startListening() async {
+    final speechService = ref.read(speechServiceProvider);
+    if (!speechService.isAvailable) await speechService.initialize();
+    if (!speechService.isAvailable) return;
+    
+    setState(() {
+      _listening = true;
+      _spokenText = '';
+    });
+    
+    await speechService.listen(
+      onResult: (text) {
+        if (mounted) setState(() => _spokenText = text);
+      },
+      onListening: (isListening) {
+        if (mounted) setState(() => _listening = isListening);
+      },
+    );
+  }
+  
+  Future<void> _stopListening() async {
+    final speechService = ref.read(speechServiceProvider);
+    await speechService.stop();
+  }
+
   Future<void> _submitAnswer() async {
     if (!_canSubmit) return;
     final q = _currentQuestion;
-    final answer = (q.type == QuestionType.matchWord || q.type == QuestionType.kanjiDraw)
-        ? q.correctAnswer
-        : _selectedAnswer!;
-    final correct = (q.type == QuestionType.matchWord || q.type == QuestionType.kanjiDraw)
-        ? _matchComplete
-        : QuizAnswerChecker.isCorrect(answer, q.correctAnswer);
+    String answer;
+    bool correct;
+    
+    if (q.type == QuestionType.speaking) {
+      answer = _spokenText;
+      // For speaking, mark as correct if they tried, or check with SpeechService
+      correct = true; // Always allow passing speaking questions to avoid frustration
+      // Or use: SpeechService.matchesExpected(_spokenText, q.correctAnswer);
+    } else if (q.type == QuestionType.matchWord || q.type == QuestionType.kanjiDraw) {
+      answer = q.correctAnswer;
+      correct = _matchComplete;
+    } else {
+      answer = _selectedAnswer!;
+      correct = QuizAnswerChecker.isCorrect(answer, q.correctAnswer);
+    }
 
     if (correct) {
       await HapticService.correctAnswer();
@@ -314,6 +354,44 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                               audio: ref.read(audioServiceProvider),
                               size: 72,
                               label: 'Play audio',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        if (q.type == QuestionType.speaking) ...[
+                          Center(
+                            child: Column(
+                              children: [
+                                PronunciationButton(
+                                  japanese: q.correctAnswer,
+                                  audio: ref.read(audioServiceProvider),
+                                  size: 72,
+                                  label: 'Listen first',
+                                ),
+                                const SizedBox(height: 16),
+                                if (_spokenText.isNotEmpty)
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(12),
+                                    margin: const EdgeInsets.symmetric(vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.surface,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: AppColors.skillPath, width: 2),
+                                    ),
+                                    child: Text('You said: $_spokenText', textAlign: TextAlign.center),
+                                  ),
+                                const SizedBox(height: 8),
+                                ElevatedButton.icon(
+                                  onPressed: _listening ? _stopListening : _startListening,
+                                  icon: Icon(_listening ? Icons.stop : Icons.mic),
+                                  label: Text(_listening ? 'Stop' : 'Try Speaking'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _listening ? AppColors.error : AppColors.primary,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 16),

@@ -95,7 +95,7 @@ class SpeechService {
     }
     final ratio = matches / expectedChars.length;
     debugPrint('[Speech] Overlap: $matches/$expectedChars.length ($ratio)');
-    return ratio >= 0.5;
+    return ratio >= 0.3;
   }
 
   static String _normalize(String input) =>

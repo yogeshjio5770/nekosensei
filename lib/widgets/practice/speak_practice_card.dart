@@ -39,8 +39,7 @@ class _SpeakPracticeCardState extends State<SpeakPracticeCard> {
   int _listenCount = 0;
   bool _speechUnavailable = false;
 
-  bool get _canContinue =>
-      _listenCount > 0 || _passed != null || _showText || _speechUnavailable;
+  bool get _canContinue => true;
 
   Future<void> _hearPhrase() async {
     setState(() => _listenCount++);
