@@ -10,8 +10,8 @@ class HuggingFaceService {
   bool _isRecording = false;
   String? _audioPath;
 
-  // Your Hugging Face Space API URL (username: yogesh20061)
-  final String _apiUrl = 'https://yogesh20061-nekosensei-whisper-api.hf.space/transcribe';
+  // Your Hugging Face Space API URL (username: yogesh20061, Space name: nekosensei)
+  final String _apiUrl = 'https://yogesh20061-nekosensei.hf.space/transcribe';
 
   Future<void> initialize() async {
     await _recorder.openRecorder();
